@@ -8,10 +8,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 **0. Scaffold and CI (continuous integration)** (4 of 4 done)
 
-**A. methylseq test profile** (0 of 3 done)
-- ⬜ Install Nextflow (workflow manager for bioinformatics pipelines); check the minimum version nf-core/methylseq 4.2.0 needs.
-- ⬜ Run nf-core/methylseq 4.2.0 with `-profile test,docker`; record the command and the run time.
-- ⬜ Pinned run config checked in: pipeline version, params file, Docker (container software) profile.
+**A. methylseq test profile** (3 of 3 done)
 
 **B. Real dataset** (0 of 5 done)
 - ⬜ Find RRBS (reduced representation bisulfite sequencing) or targeted bisulfite candidates in SRA (Sequence Read Archive); check library strategy, organism, and group labels in the metadata.
@@ -57,7 +54,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 - **Methylation calling:** counting, at each CpG (a cytosine followed by a guanine) site, how many reads show it methylated and how many unmethylated.
 - **MultiQC (combined quality control):** gathers the reports from every tool in the run into one HTML (web page) report.
 
-**Status: 🔴 No.** Nextflow (workflow manager for bioinformatics pipelines) not installed or run yet. **Build A, B.**
+**Status: 🟡 Partly.** Test profile runs end to end: trimming, Bismark alignment, deduplication, methylation calling, MultiQC (combined quality control). No real data yet. **Build B.**
 
 ### 1.2 Reproducible use: pinned pipeline version, Docker (container software) profile, a sample sheet, and a params file in the repo
 
@@ -65,7 +62,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 - **Params file:** a YAML (YAML Ain't Markup Language) file holding the run's options (genome, aligner, RRBS (reduced representation bisulfite sequencing) mode), so the run is a file in git, not a long command typed once.
 - **Sample sheet:** a CSV (comma-separated values) file listing each sample and its FASTQ (sequence reads with quality scores) files.
 
-**Status: 🔴 No.** Python side pinned (`uv.lock`, `.python-version`); nothing for the pipeline yet. **Build A, B.**
+**Status: 🟡 Partly.** Pinned: methylseq 4.2.0, Nextflow 25.04.0, Docker (container software) with `emulate_amd64`, in `scripts/run_methylseq.sh`; params file `config/methylseq/test.yaml`. The test profile brings its own sample sheet; the real dataset's sample sheet comes with Build B.
 
 ### 1.3 Convert: methylseq per-CpG (a cytosine followed by a guanine) coverage files to the shared beta table plus sample sheet
 
@@ -98,7 +95,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 ### 2.1 A one-command, version-pinned methylseq run that works on the test profile and on a downsampled real dataset
 
-**Status: 🔴 No.** **Build A, B.**
+**Status: 🟡 Partly.** Test profile: `scripts/run_methylseq.sh test config/methylseq/test.yaml` completes. Downsampled real dataset not yet. **Build B.**
 
 ### 2.2 A well-tested conversion step: unit tests on small fixture coverage files, plus a schema check that its output loads in methyl-floor
 
@@ -125,9 +122,9 @@ Order follows the brief's order of work.
 - ✅ Setup phases removed from CLAUDE.md after STOP gate 1. (PR (pull request) #2)
 
 ### A. methylseq test profile (1.1, 1.2, 2.1)
-- ⬜ Install Nextflow (workflow manager for bioinformatics pipelines); check the minimum version nf-core/methylseq 4.2.0 needs.
-- ⬜ Run nf-core/methylseq 4.2.0 with `-profile test,docker`; record the command and the run time.
-- ⬜ Pinned run config checked in: pipeline version, params file, Docker (container software) profile.
+- ✅ Install Nextflow (workflow manager for bioinformatics pipelines); check the minimum version nf-core/methylseq 4.2.0 needs. Installed 26.04.6; 4.2.0 requires `>=25.04.0`. Runs pin `NXF_VER=25.04.0`, the version 4.2.0's CI (continuous integration) must pass on: newer Nextflow rejects the 4.2.0 config, which includes `conf/aws/batch/nextflow.config`, a file missing from the release tag.
+- ✅ Run nf-core/methylseq 4.2.0 with `-profile test,docker`; record the command and the run time. `scripts/run_methylseq.sh test config/methylseq/test.yaml`: 36 tasks, 272 s (seconds) with container pulls, 154 s (seconds) cached, on an Apple Silicon laptop (18 cores, 64 GB (gigabytes)) with `emulate_amd64`.
+- ✅ Pinned run config checked in: pipeline version, params file, Docker (container software) profile. (`scripts/run_methylseq.sh`, `config/methylseq/test.yaml`)
 
 ### B. Real dataset (1.1, 1.2, 2.1)
 - ⬜ Find RRBS (reduced representation bisulfite sequencing) or targeted bisulfite candidates in SRA (Sequence Read Archive); check library strategy, organism, and group labels in the metadata.

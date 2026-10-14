@@ -20,3 +20,9 @@ htmlcov/
 .vscode/
 .idea/
 .DS_Store
+
+# Nextflow
+work/
+results/
+.nextflow/
+.nextflow.log*
