@@ -36,7 +36,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 - ⬜ One command regenerates the table and plots from pipeline output.
 
 **E. Differential methylation** (0 of 4 done)
-- ⬜ R (statistics language) environment pinned with renv (R package lockfile tool); code in `analysis/`.
+- ⬜ R (statistics language) environment pinned with renv (R package lockfile tool); code, `renv.lock`, and R library all in `r/`.
 - ⬜ DSS (Dispersion Shrinkage for Sequencing data) test per CpG (a cytosine followed by a guanine) site between groups, then DMR (differentially methylated region) calling.
 - ⬜ DMR (differentially methylated region) plots.
 - ⬜ Report how many DMRs (differentially methylated regions) survive FDR (false discovery rate) correction.
@@ -152,7 +152,7 @@ Order follows the brief's order of work.
 - ⬜ One command regenerates the table and plots from pipeline output.
 
 ### E. Differential methylation (1.4, 1.5)
-- ⬜ R (statistics language) environment pinned with renv (R package lockfile tool); code in `analysis/`.
+- ⬜ R (statistics language) environment pinned with renv (R package lockfile tool); code, `renv.lock`, and R library all in `r/`.
 - ⬜ DSS (Dispersion Shrinkage for Sequencing data) test per site, then DMR (differentially methylated region) calling.
 - ⬜ DMR (differentially methylated region) plots.
 - ⬜ Report how many DMRs (differentially methylated regions) survive FDR (false discovery rate) correction.

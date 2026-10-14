@@ -53,7 +53,7 @@ the repo.
 - Python for the conversion step, in `src/methyl_flow/`. Its output is the beta table methyl-floor reads, so it shares methyl-floor's language, tooling, and tests.
 - R with DSS (Dispersion Shrinkage for Sequencing data) for differential methylation and DMR (differentially methylated region) calling. DSS models read counts per CpG (a cytosine followed by a guanine) with a beta-binomial model and shrinks the dispersion estimates, which holds up better than methylKit's defaults at small sample counts.
 - The two halves talk through files on disk (the beta table and sample sheet), not by calling R from Python.
-- R code lives in `analysis/`, outside `src/`, since the Python package does not import it. R package versions are pinned with renv.
+- All R code lives in `r/`, outside `src/`, since the Python package does not import it. `r/` is its own renv (R package lockfile tool) project: `renv.lock` and the R library stay inside it, so nothing R-specific sits at the repo root.
 
 ### Order of work
 1. methylseq test profile running locally with Docker (container software), version pinned.
