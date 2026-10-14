@@ -316,8 +316,8 @@ and `uv run pytest`.
 
 Goal: every push and pull request runs the same three checks as the local gate.
 
-- [ ] `.github/workflows/ci.yml`: on pull request and push to main, `astral-sh/setup-uv` with caching, `uv sync --locked`, then ruff check, ruff format check, pytest
-- [ ] Concurrency group per ref with `cancel-in-progress: true`
-- [ ] Branch protection on main: PR (pull request) plus passing CI (continuous integration) required, `enforce_admins` on or it will not stop the repo owner. Needs GitHub Pro on a private repo; the API (application programming interface) returns 403 on the free plan
+- [x] `.github/workflows/ci.yml`: on pull request and push to main, `astral-sh/setup-uv` with caching, `uv sync --locked`, then ruff check, ruff format check, pytest
+- [x] Concurrency group per ref with `cancel-in-progress: true`
+- [x] Branch protection on main: PR (pull request) plus passing CI (continuous integration) required, `enforce_admins` on or it will not stop the repo owner. Needs GitHub Pro on a private repo; the API (application programming interface) returns 403 on the free plan
 
 STOP gate 1: open a trivial PR (pull request), show the green CI (continuous integration) run, merge it.

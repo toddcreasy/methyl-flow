@@ -6,9 +6,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 ## Open work
 
-**0. Scaffold and CI (continuous integration)** (1 of 4 done)
-- ⬜ CI (continuous integration) workflow: `uv sync --locked`, ruff check, ruff format check, pytest; concurrency group per ref.
-- ⬜ Branch protection on main: PR (pull request) plus passing CI (continuous integration), `enforce_admins` on.
+**0. Scaffold and CI (continuous integration)** (3 of 4 done)
 - ⬜ Setup phases removed from CLAUDE.md after STOP gate 1.
 
 **A. methylseq test profile** (0 of 3 done)
@@ -123,8 +121,8 @@ Order follows the brief's order of work.
 
 ### 0. Scaffold and CI (continuous integration)
 - ✅ uv package, ruff, pytest with a `network` marker, pre-commit, src layout, Python 3.14. (`17e6cb5`)
-- ⬜ CI (continuous integration) workflow: `uv sync --locked`, ruff check, ruff format check, pytest; concurrency group per ref.
-- ⬜ Branch protection on main: PR (pull request) plus passing CI (continuous integration), `enforce_admins` on.
+- ✅ CI (continuous integration) workflow: `uv sync --locked`, ruff check, ruff format check, pytest; concurrency group per ref. (`6a6c84e`, PR (pull request) #1)
+- ✅ Branch protection on main: PR (pull request) plus passing CI (continuous integration), `enforce_admins` on.
 - ⬜ Setup phases removed from CLAUDE.md after STOP gate 1.
 
 ### A. methylseq test profile (1.1, 1.2, 2.1)
