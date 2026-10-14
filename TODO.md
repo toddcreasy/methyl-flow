@@ -10,9 +10,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 **A. methylseq test profile** (3 of 3 done)
 
-**B. Real dataset** (0 of 5 done)
-- ⬜ Find RRBS (reduced representation bisulfite sequencing) or targeted bisulfite candidates in SRA (Sequence Read Archive); check library strategy, organism, and group labels in the metadata.
-- ⬜ Pick one dataset, 10 to 20 samples, two groups.
+**B. Real dataset** (2 of 5 done)
 - ⬜ Download script with pinned SRR (Sequence Read Archive run) accessions and checksums.
 - ⬜ Downsample reads to a laptop-sized run; record the seed and read count.
 - ⬜ methylseq sample sheet and params file for the dataset; run it.
@@ -76,7 +74,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 ### 1.4 Analyze: differential methylation with DSS (Dispersion Shrinkage for Sequencing data); QC (quality control) summary of conversion rate, coverage, and duplicate rate
 
 - **Bisulfite conversion rate:** the share of unmethylated cytosines that converted. Usually estimated from non-CpG (non cytosine-guanine) cytosines, which are almost never methylated in most human tissue. 99% means about 1 in 100 unmethylated cytosines reads as methylated, which sets a floor on false methylation.
-- **Duplicate rate:** share of reads that are PCR (polymerase chain reaction) copies of the same molecule. In RRBS (reduced representation bisulfite sequencing) many reads start at the same enzyme cut site by design, so duplicates cannot be told apart by position; check how methylseq handles deduplication in RRBS (reduced representation bisulfite sequencing) mode before reporting it.
+- **Duplicate rate:** share of reads that are PCR (polymerase chain reaction) copies of the same molecule. In RRBS (reduced representation bisulfite sequencing) many reads start at the same enzyme cut site by design, so duplicates cannot be told apart by position. methylseq 4.2.0 skips deduplication when `rrbs: true` (`workflows/methylseq/main.nf:136`), so the QC (quality control) table has to take duplicate levels from FastQC and say that RRBS (reduced representation bisulfite sequencing) inflates them by design.
 - **Differential methylation:** testing each site for a difference in methylation between groups.
 - **DMR (differentially methylated region):** a run of nearby CpG (a cytosine followed by a guanine) sites that differ together. More stable than single sites.
 - **Dispersion:** extra spread between samples beyond counting noise. DSS (Dispersion Shrinkage for Sequencing data) pulls each site's noisy estimate toward the average across sites.
@@ -95,7 +93,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 ### 2.1 A one-command, version-pinned methylseq run that works on the test profile and on a downsampled real dataset
 
-**Status: 🟡 Partly.** Test profile: `scripts/run_methylseq.sh test config/methylseq/test.yaml` completes. Downsampled real dataset not yet. **Build B.**
+**Status: 🟡 Partly.** Test profile: `scripts/run_methylseq.sh config/methylseq/test.yaml test` completes. Downsampled real dataset not yet. **Build B.**
 
 ### 2.2 A well-tested conversion step: unit tests on small fixture coverage files, plus a schema check that its output loads in methyl-floor
 
@@ -123,12 +121,12 @@ Order follows the brief's order of work.
 
 ### A. methylseq test profile (1.1, 1.2, 2.1)
 - ✅ Install Nextflow (workflow manager for bioinformatics pipelines); check the minimum version nf-core/methylseq 4.2.0 needs. Installed 26.04.6; 4.2.0 requires `>=25.04.0`. Runs pin `NXF_VER=25.04.0`, the version 4.2.0's CI (continuous integration) must pass on: newer Nextflow rejects the 4.2.0 config, which includes `conf/aws/batch/nextflow.config`, a file missing from the release tag.
-- ✅ Run nf-core/methylseq 4.2.0 with `-profile test,docker`; record the command and the run time. `scripts/run_methylseq.sh test config/methylseq/test.yaml`: 36 tasks, 272 s (seconds) with container pulls, 154 s (seconds) cached, on an Apple Silicon laptop (18 cores, 64 GB (gigabytes)) with `emulate_amd64`.
+- ✅ Run nf-core/methylseq 4.2.0 with `-profile test,docker`; record the command and the run time. `scripts/run_methylseq.sh config/methylseq/test.yaml test`: 36 tasks, 272 s (seconds) with container pulls, 154 s (seconds) cached, on an Apple Silicon laptop (18 cores, 64 GB (gigabytes)) with `emulate_amd64`.
 - ✅ Pinned run config checked in: pipeline version, params file, Docker (container software) profile. (`scripts/run_methylseq.sh`, `config/methylseq/test.yaml`)
 
 ### B. Real dataset (1.1, 1.2, 2.1)
-- ⬜ Find RRBS (reduced representation bisulfite sequencing) or targeted bisulfite candidates in SRA (Sequence Read Archive); check library strategy, organism, and group labels in the metadata.
-- ⬜ Pick one dataset, 10 to 20 samples, two groups.
+- ✅ Find RRBS (reduced representation bisulfite sequencing) or targeted bisulfite candidates in SRA (Sequence Read Archive); check library strategy, organism, and group labels in the metadata. 146 human RRBS (reduced representation bisulfite sequencing) studies with 10 to 40 samples; 6 shortlisted; BioSample labels checked (section 4).
+- ✅ Pick one dataset, 10 to 20 samples, two groups. GSE95654 (GEO (Gene Expression Omnibus) Series 95654), 9 colorectal cancer patients, tumor and adjacent normal (section 4).
 - ⬜ Download script with pinned SRR (Sequence Read Archive run) accessions and checksums.
 - ⬜ Downsample reads to a laptop-sized run; record the seed and read count.
 - ⬜ methylseq sample sheet and params file for the dataset; run it.
@@ -157,4 +155,13 @@ Order follows the brief's order of work.
 
 ## 4. Dataset plan
 
-No dataset chosen yet. Requirements from the brief: RRBS (reduced representation bisulfite sequencing) or targeted bisulfite, not WGBS (whole-genome bisulfite sequencing); public in SRA (Sequence Read Archive); 10 to 20 samples; group labels in the metadata. Check library strategy, organism, and labels before committing to one.
+Decided 2026-10-14: **GSE95654 (GEO (Gene Expression Omnibus) Series 95654), SRA (Sequence Read Archive) study SRP101332**, colorectal cancer subset.
+
+- **Paper:** Hanley MP et al. Genome-wide DNA (deoxyribonucleic acid) methylation profiling reveals cancer-associated changes within early colonic neoplasia. *Oncogene* 2017. [DOI (Digital Object Identifier) 10.1038/onc.2017.130](https://doi.org/10.1038/onc.2017.130), PMID (PubMed identifier) 28459462.
+- **Assay:** human RRBS (reduced representation bisulfite sequencing), Illumina HiSeq 2500.
+- **Subset:** primary tumor and adjacent normal colon from 9 KRAS-mutant colorectal cancer patients, 18 samples. Labels from the BioSample `tissue` field (`primary tumor`, `adjacent normal colon`) with a patient number on each. The study's other 20 samples (aberrant crypt foci and normal crypts from healthy people) are left out.
+- **Dropped: patient 41.** The tumor run, SRR5311101, has a single constant quality score (`?`) on every base in both NCBI (National Center for Biotechnology Information) and ENA (European Nucleotide Archive); no full-quality copy exists. Quality trimming and Bismark's mismatch scoring both need real scores, so the whole pair is out.
+- **Batch: read layout.** Patients 32 and 42 are single-end 1x100; the other 7 are paired-end 2x100. Each patient's tumor and normal share a layout, so layout is a between-patient batch, not confounded with tumor versus normal. Recorded in `config/gse95654/runs.tsv`.
+- **Download:** `scripts/fetch_gse95654.py` runs `prefetch` (MD5-validated) and `fasterq-dump` from NCBI (National Center for Biotechnology Information), then `seqtk sample` to 5,000,000 reads (read pairs for paired-end) per sample with seed 42. Pinned BioContainers images: `sra-tools:3.2.1--h4304569_1`, `seqtk:1.4--he4a0461_1` (the tags nf-core uses). SRA Lite files are rejected, because they replace quality scores with a constant. ENA (European Nucleotide Archive) was the first choice but served about 100 KB/s (kilobytes per second) here; NCBI's AWS (Amazon Web Services) copy served about 37 MB/s (megabytes per second).
+- **Reference:** GENCODE release 50 GRCh38 primary assembly (no alt haplotypes), Bismark index built by methylseq with `save_reference`. Chosen over nf-core's iGenomes GRCh38, which nf-core flags as old and unmaintained (index built 2017).
+- **Runner-up:** SRP421427, 10 clear cell renal cell carcinoma tumor and normal pairs, all paired-end; unpublished, all male, and kidney tumors shed little cfDNA (cell-free DNA).

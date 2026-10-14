@@ -1,1 +1,3 @@
-outdir: results/test
+# Uses the nf-core/methylseq `test` profile for input and references (tiny test genome).
+# scripts/run_methylseq.sh adds `-profile test,<compute>` when it sees this file name.
+multiqc_title: methyl-flow methylseq test

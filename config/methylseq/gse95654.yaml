@@ -1,0 +1,18 @@
+# GSE95654 colorectal tumor and adjacent normal, 9 patients, RRBS, downsampled.
+# For --compute aws, every path (samplesheet contents included) should be s3://.
+# Full parameter list: https://nf-co.re/methylseq/4.2.0/parameters
+
+input: config/gse95654/samplesheet.csv
+rrbs: true
+
+# Reference: GENCODE release 50 GRCh38 primary assembly (no alt haplotypes), downloaded once to
+# data/references/ from
+#   https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_50/GRCh38.primary_assembly.genome.fa.gz
+#   MD5 da1a11258be075cfa7af718162c894e7
+# save_reference publishes the Bismark index to <outdir>/bismark/reference_genome/; later runs
+# can set bismark_index to that folder instead of rebuilding it.
+fasta: data/references/GRCh38.primary_assembly.genome.fa.gz
+save_reference: true
+igenomes_ignore: true
+
+multiqc_title: methyl-flow GSE95654
