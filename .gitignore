@@ -26,3 +26,9 @@ work/
 results/
 .nextflow/
 .nextflow.log*
+
+# Downloaded and derived data
+data/
+
+# Nextflow logs
+logs/
