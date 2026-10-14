@@ -53,7 +53,7 @@ the repo.
 - Python for the conversion step, in `src/methyl_flow/`. Its output is the beta table methyl-floor reads, so it shares methyl-floor's language, tooling, and tests.
 - R with DSS (Dispersion Shrinkage for Sequencing data) for differential methylation and DMR (differentially methylated region) calling. DSS models read counts per CpG (a cytosine followed by a guanine) with a beta-binomial model and shrinks the dispersion estimates, which holds up better than methylKit's defaults at small sample counts.
 - The two halves talk through files on disk (the beta table and sample sheet), not by calling R from Python.
-- R code lives in `analysis/`, outside `src/`, since the Python package does not import it. R package versions are pinned with renv.
+- All R code lives in `r/`, outside `src/`, since the Python package does not import it. `r/` is its own renv (R package lockfile tool) project: `renv.lock` and the R library stay inside it, so nothing R-specific sits at the repo root.
 
 ### Order of work
 1. methylseq test profile running locally with Docker (container software), version pinned.
@@ -316,8 +316,8 @@ and `uv run pytest`.
 
 Goal: every push and pull request runs the same three checks as the local gate.
 
-- [ ] `.github/workflows/ci.yml`: on pull request and push to main, `astral-sh/setup-uv` with caching, `uv sync --locked`, then ruff check, ruff format check, pytest
-- [ ] Concurrency group per ref with `cancel-in-progress: true`
-- [ ] Branch protection on main: PR (pull request) plus passing CI (continuous integration) required, `enforce_admins` on or it will not stop the repo owner. Needs GitHub Pro on a private repo; the API (application programming interface) returns 403 on the free plan
+- [x] `.github/workflows/ci.yml`: on pull request and push to main, `astral-sh/setup-uv` with caching, `uv sync --locked`, then ruff check, ruff format check, pytest
+- [x] Concurrency group per ref with `cancel-in-progress: true`
+- [x] Branch protection on main: PR (pull request) plus passing CI (continuous integration) required, `enforce_admins` on or it will not stop the repo owner. Needs GitHub Pro on a private repo; the API (application programming interface) returns 403 on the free plan
 
 STOP gate 1: open a trivial PR (pull request), show the green CI (continuous integration) run, merge it.
