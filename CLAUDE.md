@@ -47,7 +47,7 @@ the repo.
 
 ### Compute
 - Run methylseq's test profile first, then a downsampled real set on the laptop. Move to cloud compute only if needed.
-- Pipeline version: nf-core/methylseq 4.2.0 is the latest release (GitHub releases API, checked 2026-10-14). Re-check the release, the minimum Nextflow version, and the aligner options before pinning.
+- Pinned versions (2026-10-14): nf-core/methylseq 4.2.0 and Nextflow 25.04.0, set in `scripts/run_methylseq.sh`. Newer Nextflow rejects the 4.2.0 config, which includes `conf/aws/batch/nextflow.config`, a file missing from the release tag; 25.04.0 is the version 4.2.0's CI (continuous integration) must pass on. Docker (container software) runs with `emulate_amd64`, so Apple Silicon uses the same x86_64 images as everyone else. Aligner is Bismark, the default. Change a pin only with a passing test-profile run.
 
 ### Language split (decided 2026-10-14)
 - Python for the conversion step, in `src/methyl_flow/`. Its output is the beta table methyl-floor reads, so it shares methyl-floor's language, tooling, and tests.
