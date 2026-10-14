@@ -103,6 +103,11 @@ else
     RESUME=(-resume "$SESSION_ID")
 fi
 OUTDIR="$RESULTS_BASE/methylseq/$RUN_ID"
+
+# Console output goes to the terminal and to logs/methylseq/<run name>.console.log
+mkdir -p "$ROOT/logs/methylseq"
+exec > >(tee -a "$ROOT/logs/methylseq/$RUN_NAME.console.log") 2>&1
+
 echo "Run ID: $RUN_ID  (output: $OUTDIR)"
 
 set -x
