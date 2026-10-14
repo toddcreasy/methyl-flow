@@ -6,8 +6,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 ## Open work
 
-**0. Scaffold and CI (continuous integration)** (3 of 4 done)
-- ⬜ Setup phases removed from CLAUDE.md after STOP gate 1.
+**0. Scaffold and CI (continuous integration)** (4 of 4 done)
 
 **A. methylseq test profile** (0 of 3 done)
 - ⬜ Install Nextflow (workflow manager for bioinformatics pipelines); check the minimum version nf-core/methylseq 4.2.0 needs.
@@ -123,7 +122,7 @@ Order follows the brief's order of work.
 - ✅ uv package, ruff, pytest with a `network` marker, pre-commit, src layout, Python 3.14. (`17e6cb5`)
 - ✅ CI (continuous integration) workflow: `uv sync --locked`, ruff check, ruff format check, pytest; concurrency group per ref. (`6a6c84e`, PR (pull request) #1)
 - ✅ Branch protection on main: PR (pull request) plus passing CI (continuous integration), `enforce_admins` on.
-- ⬜ Setup phases removed from CLAUDE.md after STOP gate 1.
+- ✅ Setup phases removed from CLAUDE.md after STOP gate 1. (PR (pull request) #2)
 
 ### A. methylseq test profile (1.1, 1.2, 2.1)
 - ⬜ Install Nextflow (workflow manager for bioinformatics pipelines); check the minimum version nf-core/methylseq 4.2.0 needs.
