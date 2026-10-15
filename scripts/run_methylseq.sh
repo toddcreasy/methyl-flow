@@ -110,6 +110,11 @@ exec > >(tee -a "$ROOT/logs/methylseq/$RUN_NAME.console.log") 2>&1
 
 echo "Run ID: $RUN_ID  (output: $OUTDIR)"
 
+# Stream the run to Seqera Platform when a token is set. Nextflow reads the
+# token from TOWER_ACCESS_TOKEN, so it never appears on the command line.
+TOWER=()
+[[ -n "${TOWER_ACCESS_TOKEN:-}" ]] && TOWER=(-with-tower)
+
 set -x
 nextflow run "$REPO" \
     -r "$VERSION" \
@@ -118,5 +123,6 @@ nextflow run "$REPO" \
     "${CONFIGS[@]}" \
     -params-file "$PARAMS_FILE" \
     --outdir "$OUTDIR" \
+    ${TOWER[@]+"${TOWER[@]}"} \
     ${RESUME[@]+"${RESUME[@]}"} \
     ${EXTRA[@]+"${EXTRA[@]}"}
