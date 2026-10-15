@@ -12,11 +12,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 **B. Real dataset** (5 of 5 done)
 
-**C. Conversion to the beta table** (0 of 4 done)
-- ⬜ Read Bismark coverage files from methylseq output.
-- ⬜ Write the beta table (samples by CpG (a cytosine followed by a guanine) sites) plus sample sheet in methyl-floor's format.
-- ⬜ Unit tests on small fixture coverage files.
-- ⬜ Schema check: the output loads in methyl-floor.
+**C. Conversion to the beta table** (4 of 4 done)
 
 **D. QC (quality control) summary and plots** (0 of 4 done)
 - ⬜ QC (quality control) table per sample: bisulfite conversion rate, coverage, duplicate rate, generated from pipeline output.
@@ -66,7 +62,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 - **Beta value:** methylated reads divided by total reads at one site, from 0 (never methylated) to 1 (always).
 - **The contract:** methyl-floor reads a beta table (samples by CpG (a cytosine followed by a guanine) sites) plus a sample sheet. This step is what ties the two repos together.
 
-**Status: 🔴 No.** **Build C.**
+**Status: 🟢 Yes.** `src/methyl_flow/convert.py`, run on AWS (Amazon Web Services) Batch by `pipelines/convert`. Details in Build C.
 
 ### 1.4 Analyze: differential methylation with DSS (Dispersion Shrinkage for Sequencing data); QC (quality control) summary of conversion rate, coverage, and duplicate rate
 
@@ -94,7 +90,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 ### 2.2 A well-tested conversion step: unit tests on small fixture coverage files, plus a schema check that its output loads in methyl-floor
 
-**Status: 🔴 No.** pytest and CI (continuous integration) are set up; one import test only. **Build C.**
+**Status: 🟢 Yes.** `tests/test_convert.py`: unit tests on fixture coverage files, plus a schema check against methyl-floor's own loader (Build C).
 
 ### 2.3 A QC (quality control) summary table and the plots, generated from pipeline output, not hand-edited
 
@@ -133,10 +129,11 @@ Order follows the brief's order of work.
   - Mean CpG (a cytosine followed by a guanine) methylation drops from normal to tumor in P15 (64.2% to 33.3%), P16, P50, and slightly P08; P42 rises; P51, P54, P60 are flat.
 
 ### C. Conversion (1.3, 2.2)
-- ⬜ Read Bismark coverage files from methylseq output.
-- ⬜ Write the beta table plus sample sheet in methyl-floor's format.
-- ⬜ Unit tests on small fixture coverage files.
-- ⬜ Schema check: the output loads in methyl-floor.
+- ✅ Read Bismark coverage files from methylseq output. `src/methyl_flow/convert.py:read_coverage` keeps chr1 to chr22, chrX, chrY and sites with at least 10 reads (`--min-coverage`); beta is methylated over total reads. The two cytosines of a CpG (a cytosine followed by a guanine), one per strand, stay separate rows, since merging them needs the reference sequence.
+- ✅ Write the beta table plus sample sheet in methyl-floor's format. `samples.tsv` (methyl-floor's 12 columns; `sample_id` is the GSM (Gene Expression Omnibus sample) accession, `batch` is read layout) and `betas/GSE95654.parquet` (`probe` as `chrom:position`, one float32 column per sample). Runs on AWS (Amazon Web Services) Batch: `scripts/run.sh convert config/convert/gse95654.yaml`, pipeline `pipelines/convert`. Run `convert_gse95654_20261015-074634`: 1 task, 52 s (seconds), 646,687 sites across 18 samples.
+  - Sites at 10 or more reads per sample range from 25,530 (P16 normal) to 177,711 (P15 normal), out of about 6 million covered cytosines per sample, even though every sample has about 5 million reads. The spread points to differences in library complexity; Build D (QC (quality control) summary) checks it against FastQC duplicate levels.
+- ✅ Unit tests on small fixture coverage files. `tests/test_convert.py`: coverage and chromosome filters, beta math, file matching, genome-order merge with missing values, sample sheet layout.
+- ✅ Schema check: the output loads in methyl-floor. `test_output_loads_in_methyl_floor` checks the sample sheet columns against `methyl_floor.load.SAMPLE_FIELDS` and reads the beta table with `methyl_floor.probes.iter_betas`. CI (continuous integration) skips it because methyl-floor is a separate private repo; run it with `uv run --with ../methyl-floor pytest`.
 
 ### D. QC (quality control) summary and plots (1.4, 1.5, 2.3)
 - ⬜ QC (quality control) table per sample: bisulfite conversion rate, coverage, duplicate rate.

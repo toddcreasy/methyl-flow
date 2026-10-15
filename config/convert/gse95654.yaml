@@ -1,0 +1,11 @@
+# Convert the GSE95654 methylseq run into methyl-floor's beta table and sample sheet.
+# Run with: scripts/run.sh convert config/convert/gse95654.yaml
+
+coverage: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/methylseq/methylseq_gse95654_20261014-222956/bismark/methylation_calls/methylation_coverage/*.bismark.cov.gz
+manifest: config/gse95654/runs.tsv
+study: GSE95654
+disease_state: colorectal cancer
+pipeline: nf-core/methylseq 4.2.0 Bismark
+
+# Sites with fewer reads than this get a missing beta for that sample
+min_coverage: 10
