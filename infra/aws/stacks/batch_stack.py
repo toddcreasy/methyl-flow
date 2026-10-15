@@ -1,21 +1,27 @@
-"""AWS Batch infrastructure for running pinned nf-core/methylseq from this repo.
+"""AWS Batch infrastructure for running every methyl-flow pipeline on AWS.
 
 Mirrors the `aws` profile in config/methylseq/compute.config: a job queue + S3 work dir
 that Nextflow's awsbatch executor points at, and an instance AMI that carries
 the AWS CLI at /home/ec2-user/miniconda/bin/aws (aws.batch.cliPath default).
+
+The Nextflow head process also runs here, as a Batch job on the on-demand queue,
+so a laptop only submits runs (scripts/run_methylseq.sh, scripts/run_fetch.sh).
 """
 
 from aws_cdk import (
     CfnOutput,
     Duration,
     RemovalPolicy,
+    Size,
     Stack,
 )
 from aws_cdk import aws_batch as batch
+from aws_cdk import aws_budgets as budgets
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_ecs as ecs
 from aws_cdk import aws_iam as iam
 from aws_cdk import aws_s3 as s3
+from aws_cdk import aws_secretsmanager as secretsmanager
 from constructs import Construct
 
 # Instance families suitable for bioinformatics workloads (general, compute,
@@ -29,6 +35,34 @@ INSTANCE_CLASSES = [
     ec2.InstanceClass.R5,
     ec2.InstanceClass.R6I,
 ]
+
+# Nextflow version pinned in scripts/run_methylseq.sh (methylseq 4.2.0's CI version).
+NEXTFLOW_IMAGE = "nextflow/nextflow:25.04.0"
+
+# Actions the Nextflow head process needs to drive the awsbatch executor
+# (https://docs.seqera.io/nextflow/aws), plus logs:GetLogEvents so failed-task
+# reports can include the task's log.
+HEAD_JOB_ACTIONS = [
+    "batch:CancelJob",
+    "batch:DescribeComputeEnvironments",
+    "batch:DescribeJobDefinitions",
+    "batch:DescribeJobQueues",
+    "batch:DescribeJobs",
+    "batch:ListJobs",
+    "batch:RegisterJobDefinition",
+    "batch:SubmitJob",
+    "batch:TagResource",
+    "batch:TerminateJob",
+    "ec2:DescribeInstanceAttribute",
+    "ec2:DescribeInstances",
+    "ec2:DescribeInstanceStatus",
+    "ec2:DescribeInstanceTypes",
+    "ecs:DescribeContainerInstances",
+    "ecs:DescribeTasks",
+    "logs:GetLogEvents",
+]
+
+MONTHLY_BUDGET_USD = 50
 
 MINICONDA_INSTALL_DIR = "/home/ec2-user/miniconda"
 MINIFORGE_URL = (
@@ -190,6 +224,101 @@ class BatchStack(Stack):
             ],
         )
 
+        # --- Nextflow head job ------------------------------------------------
+        # Seqera Platform token. CDK creates it with a random placeholder; the real
+        # value is set out of band with `aws secretsmanager put-secret-value`, so it
+        # never appears in code or the template.
+        tower_secret = secretsmanager.Secret(
+            self,
+            "TowerAccessToken",
+            secret_name="methyl-flow/tower-access-token",
+            description="Seqera Platform access token for Nextflow -with-tower",
+        )
+
+        execution_role = iam.Role(
+            self,
+            "HeadExecutionRole",
+            assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AmazonECSTaskExecutionRolePolicy"
+                )
+            ],
+        )
+        tower_secret.grant_read(execution_role)
+
+        head_role = iam.Role(
+            self,
+            "HeadJobRole",
+            assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
+        )
+        head_role.add_to_policy(iam.PolicyStatement(actions=HEAD_JOB_ACTIONS, resources=["*"]))
+        bucket.grant_read_write(head_role)
+        # nf-core pipelines validate that igenomes_base (s3://ngi-igenomes) exists even when
+        # iGenomes is unused, and a role-signed request to a public bucket needs IAM allow.
+        head_role.add_to_policy(
+            iam.PolicyStatement(actions=["s3:ListBucket"], resources=["arn:aws:s3:::ngi-igenomes"])
+        )
+        head_role.add_to_policy(
+            iam.PolicyStatement(actions=["s3:GetObject"], resources=["arn:aws:s3:::ngi-igenomes/*"])
+        )
+
+        head_job = batch.EcsJobDefinition(
+            self,
+            "HeadJobDefinition",
+            job_definition_name="methyl-flow-nextflow-head",
+            container=batch.EcsEc2ContainerDefinition(
+                self,
+                "HeadContainer",
+                image=ecs.ContainerImage.from_registry(NEXTFLOW_IMAGE),
+                cpu=2,
+                memory=Size.mebibytes(6144),
+                command=["nextflow", "-version"],
+                job_role=head_role,
+                execution_role=execution_role,
+                environment={
+                    "NXF_OPTS": "-Xms512m -Xmx4g",
+                    "NXF_ANSI_LOG": "false",
+                },
+                secrets={"TOWER_ACCESS_TOKEN": batch.Secret.from_secrets_manager(tower_secret)},
+            ),
+        )
+
+        # --- Cost guardrail -----------------------------------------------------
+        # Alerts only; nothing is stopped. Filters on the project cost allocation
+        # tag, so it counts only this stack's resources. ALERT_EMAIL comes from
+        # context (-c alert_email=...) so the address is not committed.
+        alert_email = self.node.try_get_context("alert_email")
+        if alert_email:
+            subscribers = [
+                budgets.CfnBudget.SubscriberProperty(subscription_type="EMAIL", address=alert_email)
+            ]
+            budgets.CfnBudget(
+                self,
+                "MonthlyBudget",
+                budget=budgets.CfnBudget.BudgetDataProperty(
+                    budget_name="methyl-flow-monthly",
+                    budget_type="COST",
+                    time_unit="MONTHLY",
+                    budget_limit=budgets.CfnBudget.SpendProperty(
+                        amount=MONTHLY_BUDGET_USD, unit="USD"
+                    ),
+                    cost_filters={"TagKeyValue": ["user:project$methyl-flow"]},
+                ),
+                notifications_with_subscribers=[
+                    budgets.CfnBudget.NotificationWithSubscribersProperty(
+                        notification=budgets.CfnBudget.NotificationProperty(
+                            comparison_operator="GREATER_THAN",
+                            notification_type=kind,
+                            threshold=pct,
+                            threshold_type="PERCENTAGE",
+                        ),
+                        subscribers=subscribers,
+                    )
+                    for kind, pct in (("ACTUAL", 80), ("ACTUAL", 100), ("FORECASTED", 100))
+                ],
+            )
+
         # --- Outputs ----------------------------------------------------------
         CfnOutput(self, "BucketName", value=bucket.bucket_name)
         CfnOutput(self, "WorkDir", value=work_dir)
@@ -197,6 +326,8 @@ class BatchStack(Stack):
         CfnOutput(self, "SpotQueue", value=spot_queue.job_queue_name)
         CfnOutput(self, "OnDemandQueue", value=ondemand_queue.job_queue_name)
         CfnOutput(self, "Region", value=self.region)
+        CfnOutput(self, "HeadJobDefinitionName", value=head_job.job_definition_name)
+        CfnOutput(self, "TowerSecretName", value=tower_secret.secret_name)
         CfnOutput(
             self,
             "EnvSnippet",

@@ -190,3 +190,50 @@ def test_max_vcpus_capped(template: Template) -> None:
         "AWS::Batch::ComputeEnvironment",
         {"ComputeResources": Match.object_like({"MaxvCpus": 64})},
     )
+
+
+def test_head_job_definition(template: Template) -> None:
+    defs = template.find_resources("AWS::Batch::JobDefinition")
+    assert len(defs) == 1
+    props = next(iter(defs.values()))["Properties"]
+    assert props["JobDefinitionName"] == "methyl-flow-nextflow-head"
+    container = props["ContainerProperties"]
+    assert container["Image"] == "nextflow/nextflow:25.04.0"
+    assert container["Secrets"][0]["Name"] == "TOWER_ACCESS_TOKEN"
+    assert "JobRoleArn" in container and "ExecutionRoleArn" in container
+
+
+def test_head_role_can_drive_batch(template: Template) -> None:
+    policies = json.dumps(template.find_resources("AWS::IAM::Policy"))
+    for action in ("batch:SubmitJob", "batch:TerminateJob", "batch:RegisterJobDefinition"):
+        assert action in policies
+
+
+def test_tower_secret_has_no_committed_value(template: Template) -> None:
+    template.has_resource_properties(
+        "AWS::SecretsManager::Secret",
+        {"Name": "methyl-flow/tower-access-token", "GenerateSecretString": Match.any_value()},
+    )
+
+
+def test_budget_only_with_alert_email(template: Template) -> None:
+    template.resource_count_is("AWS::Budgets::Budget", 0)
+    app = cdk.App(context={"alert_email": "alerts@example.com"})
+    with_budget = Template.from_stack(BatchStack(app, "BudgetStack"))
+    with_budget.has_resource_properties(
+        "AWS::Budgets::Budget",
+        {
+            "Budget": Match.object_like(
+                {
+                    "BudgetLimit": {"Amount": 50, "Unit": "USD"},
+                    "CostFilters": {"TagKeyValue": ["user:project$methyl-flow"]},
+                }
+            )
+        },
+    )
+
+
+def test_head_role_reads_igenomes(template: Template) -> None:
+    policies = json.dumps(template.find_resources("AWS::IAM::Policy"))
+    assert "arn:aws:s3:::ngi-igenomes" in policies
+    assert "arn:aws:s3:::ngi-igenomes/*" in policies
