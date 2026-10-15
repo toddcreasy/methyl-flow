@@ -74,7 +74,7 @@ class BatchStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        max_vcpus = int(self.node.try_get_context("max_vcpus") or 64)
+        max_vcpus = int(self.node.try_get_context("max_vcpus") or 256)
         root_volume_gb = int(self.node.try_get_context("root_volume_gb") or 200)
 
         existing_bucket_name = self.node.try_get_context("bucket_name")

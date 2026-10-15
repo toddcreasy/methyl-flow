@@ -19,7 +19,7 @@ laptop only submits runs:
   in context.
 
 Adapted from nf-multiomics' `infra/aws`. Differences: queue names, every resource tagged
-`project=methyl-flow`, `env=dev`, `managed-by=cdk`, a 64 vCPU (virtual CPU) ceiling instead of 256,
+`project=methyl-flow`, `env=dev`, `managed-by=cdk`, a 256 vCPU (virtual CPU) ceiling (raised from 64 on 2026-10-15 when 18 parallel alignments queued behind it),
 and a 200 GB (gigabyte) root volume instead of 500.
 
 ## Deploy
@@ -48,7 +48,7 @@ aws secretsmanager put-secret-value --secret-id methyl-flow/tower-access-token \
 
 Context defaults (override with `cdk deploy -c max_vcpus=128`):
 
-- `max_vcpus` (default `64`): ceiling for each compute environment
+- `max_vcpus` (default `256`): ceiling for each compute environment
 - `root_volume_gb` (default `200`): root EBS (Elastic Block Store) volume on Batch instances
 - `bucket_name` (default unset): use an existing bucket instead of creating one
 
