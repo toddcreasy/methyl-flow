@@ -188,7 +188,7 @@ def test_every_resource_tagged() -> None:
 def test_max_vcpus_capped(template: Template) -> None:
     template.has_resource_properties(
         "AWS::Batch::ComputeEnvironment",
-        {"ComputeResources": Match.object_like({"MaxvCpus": 64})},
+        {"ComputeResources": Match.object_like({"MaxvCpus": 256})},
     )
 
 

@@ -17,7 +17,7 @@
     ]
   },
   "context": {
-    "max_vcpus": 64,
+    "max_vcpus": 256,
     "root_volume_gb": 200,
     "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": true,
     "@aws-cdk/aws-apigateway:authorizerChangeDeploymentLogicalId": true,

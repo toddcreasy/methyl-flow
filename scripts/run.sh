@@ -157,6 +157,8 @@ env = {k: os.environ[k] for k in (
     "AWS_REGION", "BATCH_QUEUE", "AWS_S3_WORKDIR", "BATCH_CLI_PATH",
     "AWS_MAX_CPUS", "AWS_MAX_MEMORY") if os.environ.get(k)}
 env["NXF_CLOUDCACHE_PATH"] = os.environ["AWS_S3_RUNDIR"].rstrip("/") + "/cache"
+# A fresh head container has no local run history; resume from the cloud cache instead
+env["NXF_IGNORE_RESUME_HISTORY"] = "true"
 print(json.dumps({
     "command": ["bash", "-c", "echo " + os.environ["HEAD_B64"] + " | base64 -d | bash"],
     "environment": [{"name": k, "value": v} for k, v in env.items()],
