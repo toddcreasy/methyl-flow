@@ -46,8 +46,8 @@ the repo.
 - No dataset accession has been verified yet. Check library strategy, organism, and group labels in the SRA (Sequence Read Archive) metadata before committing to one.
 
 ### Compute
-- Run methylseq's test profile first, then a downsampled real set on the laptop. Move to cloud compute only if needed.
-- Pinned versions (2026-10-14): nf-core/methylseq 4.2.0 and Nextflow 25.04.0, set in `scripts/run_methylseq.sh`. Newer Nextflow rejects the 4.2.0 config, which includes `conf/aws/batch/nextflow.config`, a file missing from the release tag; 25.04.0 is the version 4.2.0's CI (continuous integration) must pass on. Docker (container software) runs with `emulate_amd64`, so Apple Silicon uses the same x86_64 images as everyone else. Aligner is Bismark, the default. Change a pin only with a passing test-profile run.
+- AWS (Amazon Web Services) Batch only (decided 2026-10-14). The laptop submits runs and does no processing: `scripts/run.sh <pipeline> <params-file>` uploads config to S3 (Amazon Simple Storage Service) and submits a Nextflow head job to the on-demand queue, which runs tasks on Spot. Infrastructure is `infra/aws/` (`MethylFlowBatchStack`). The local Docker profile ran out of memory sharing Docker Desktop with other projects; `local` and `slurm` stay available but are not the default.
+- Pinned versions (2026-10-14): nf-core/methylseq 4.2.0 and Nextflow 25.04.0, set in `scripts/run.sh` and in the AWS head job image (`nextflow/nextflow:25.04.0`, `infra/aws/stacks/batch_stack.py`). Newer Nextflow rejects the 4.2.0 config, which includes `conf/aws/batch/nextflow.config`, a file missing from the release tag; 25.04.0 is the version 4.2.0's CI (continuous integration) must pass on. Aligner is Bismark, the default. Change a pin only with a passing test-profile run.
 
 ### Language split (decided 2026-10-14)
 - Python for the conversion step, in `src/methyl_flow/`. Its output is the beta table methyl-floor reads, so it shares methyl-floor's language, tooling, and tests.

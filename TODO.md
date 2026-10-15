@@ -60,7 +60,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 - **Params file:** a YAML (YAML Ain't Markup Language) file holding the run's options (genome, aligner, RRBS (reduced representation bisulfite sequencing) mode), so the run is a file in git, not a long command typed once.
 - **Sample sheet:** a CSV (comma-separated values) file listing each sample and its FASTQ (sequence reads with quality scores) files.
 
-**Status: 🟡 Partly.** Pinned: methylseq 4.2.0, Nextflow 25.04.0, Docker (container software) with `emulate_amd64`, in `scripts/run_methylseq.sh`; params file `config/methylseq/test.yaml`. The test profile brings its own sample sheet; the real dataset's sample sheet comes with Build B.
+**Status: 🟡 Partly.** Pinned: methylseq 4.2.0, Nextflow 25.04.0, AWS (Amazon Web Services) Batch with a Nextflow head job, in `scripts/run.sh` and `infra/aws/`; params file `config/methylseq/test.yaml`. The test profile brings its own sample sheet; the real dataset's sample sheet comes with Build B.
 
 ### 1.3 Convert: methylseq per-CpG (a cytosine followed by a guanine) coverage files to the shared beta table plus sample sheet
 
@@ -93,7 +93,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 ### 2.1 A one-command, version-pinned methylseq run that works on the test profile and on a downsampled real dataset
 
-**Status: 🟡 Partly.** Test profile: `scripts/run_methylseq.sh config/methylseq/test.yaml test` completes. Downsampled real dataset not yet. **Build B.**
+**Status: 🟡 Partly.** Test profile: `scripts/run.sh methylseq config/methylseq/test.yaml` completes on AWS (Amazon Web Services) Batch. Downsampled real dataset not yet. **Build B.**
 
 ### 2.2 A well-tested conversion step: unit tests on small fixture coverage files, plus a schema check that its output loads in methyl-floor
 
@@ -162,6 +162,6 @@ Decided 2026-10-14: **GSE95654 (GEO (Gene Expression Omnibus) Series 95654), SRA
 - **Subset:** primary tumor and adjacent normal colon from 9 KRAS-mutant colorectal cancer patients, 18 samples. Labels from the BioSample `tissue` field (`primary tumor`, `adjacent normal colon`) with a patient number on each. The study's other 20 samples (aberrant crypt foci and normal crypts from healthy people) are left out.
 - **Dropped: patient 41.** The tumor run, SRR5311101, has a single constant quality score (`?`) on every base in both NCBI (National Center for Biotechnology Information) and ENA (European Nucleotide Archive); no full-quality copy exists. Quality trimming and Bismark's mismatch scoring both need real scores, so the whole pair is out.
 - **Batch: read layout.** Patients 32 and 42 are single-end 1x100; the other 7 are paired-end 2x100. Each patient's tumor and normal share a layout, so layout is a between-patient batch, not confounded with tumor versus normal. Recorded in `config/gse95654/runs.tsv`.
-- **Download:** `scripts/fetch_gse95654.py` runs `prefetch` (MD5-validated) and `fasterq-dump` from NCBI (National Center for Biotechnology Information), then `seqtk sample` to 5,000,000 reads (read pairs for paired-end) per sample with seed 42. Pinned BioContainers images: `sra-tools:3.2.1--h4304569_1`, `seqtk:1.4--he4a0461_1` (the tags nf-core uses). SRA Lite files are rejected, because they replace quality scores with a constant. ENA (European Nucleotide Archive) was the first choice but served about 100 KB/s (kilobytes per second) here; NCBI's AWS (Amazon Web Services) copy served about 37 MB/s (megabytes per second).
+- **Download:** `pipelines/fetch_sra` on AWS (Amazon Web Services) Batch (`scripts/run.sh fetch_sra config/fetch_sra/gse95654.yaml`) runs `prefetch` (MD5-validated) and `fasterq-dump` from NCBI (National Center for Biotechnology Information), then `seqtk sample` to 5,000,000 reads (read pairs for paired-end) per sample with seed 42, in one task per sample so the unpacked FASTQ (sequence reads with quality scores) never leaves the instance. Container: `community.wave.seqera.io/library/sra-tools_seqtk:67fdf6e5e7fd06bc` (sra-tools 3.2.1, seqtk 1.4). SRA Lite files, which replace quality scores with a constant, are rejected. It also fetches and MD5-checks the GENCODE reference and writes the methylseq samplesheet. nf-core/fetchngs was checked first: it does not force full-quality files, cannot downsample, and cannot write a methylseq samplesheet.
 - **Reference:** GENCODE release 50 GRCh38 primary assembly (no alt haplotypes), Bismark index built by methylseq with `save_reference`. Chosen over nf-core's iGenomes GRCh38, which nf-core flags as old and unmaintained (index built 2017).
 - **Runner-up:** SRP421427, 10 clear cell renal cell carcinoma tumor and normal pairs, all paired-end; unpublished, all male, and kidney tumors shed little cfDNA (cell-free DNA).

@@ -1,0 +1,14 @@
+# Fetch GSE95654 (SRA study SRP101332) on AWS: 9 colorectal cancer patients, tumor and
+# adjacent normal, downsampled to 5,000,000 reads (read pairs for paired-end) per sample.
+# Run with: scripts/run.sh fetch_sra config/fetch_sra/gse95654.yaml
+
+runs: config/gse95654/runs.tsv
+reads: 5000000
+seed: 42
+
+# GENCODE release 50 GRCh38 primary assembly (no alt haplotypes)
+fasta: https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_50/GRCh38.primary_assembly.genome.fa.gz
+fasta_md5: da1a11258be075cfa7af718162c894e7
+
+# Reads, reference, and the methylseq samplesheet land here; config/methylseq/gse95654.yaml reads them
+data_dir: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/data/gse95654
