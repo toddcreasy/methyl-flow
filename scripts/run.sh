@@ -3,7 +3,8 @@
 #
 #   scripts/run.sh <pipeline> <params-file> [--compute aws|local|slurm] [--run-id <id>] [--resume <session-id>] [extra nextflow args]
 #
-# Pipelines: methylseq (nf-core/methylseq 4.2.0), fetch_sra (pipelines/fetch_sra).
+# Pipelines: methylseq (nf-core/methylseq 4.2.0), fetch_sra (pipelines/fetch_sra),
+# convert (pipelines/convert).
 # Each run gets a run ID (<params file name>_<YYYYMMDD-HHMMSS>) used as the Nextflow
 # run name and the output folder: <results>/<pipeline>/<run ID>/.
 #
@@ -13,6 +14,7 @@
 # Examples:
 #   scripts/run.sh fetch_sra config/fetch_sra/gse95654.yaml
 #   scripts/run.sh methylseq config/methylseq/gse95654.yaml
+#   scripts/run.sh convert config/convert/gse95654.yaml
 #   scripts/run.sh methylseq config/methylseq/test.yaml
 #   scripts/run.sh methylseq config/methylseq/gse95654.yaml --resume <session-id>
 
@@ -21,7 +23,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [[ $# -ge 2 ]] || usage
 PIPELINE="$1"; PARAMS_FILE="$2"; shift 2
@@ -51,8 +53,8 @@ export NXF_VER=25.04.0
 case "$PIPELINE" in
     methylseq) REPO=nf-core/methylseq; REVISION=(-r 4.2.0) ;;
     # This repo's own pipeline, run from its folder at the checked-out commit
-    fetch_sra) REPO=pipelines/fetch_sra; REVISION=() ;;
-    *) echo "Unknown pipeline: $PIPELINE (use methylseq or fetch_sra)" >&2; exit 1 ;;
+    fetch_sra|convert) REPO=pipelines/$PIPELINE; REVISION=() ;;
+    *) echo "Unknown pipeline: $PIPELINE (use methylseq, fetch_sra, or convert)" >&2; exit 1 ;;
 esac
 
 [[ -f "$PARAMS_FILE" ]] || { echo "Params file not found: $PARAMS_FILE" >&2; exit 1; }
@@ -133,10 +135,10 @@ if [[ "$COMPUTE" != aws ]]; then
     exit
 fi
 
-# --- AWS: upload config and pipelines, then submit the head job ----------------------
+# --- AWS: upload config, pipelines, and src, then submit the head job ----------------------
 BUNDLE="${AWS_S3_RUNDIR%/}/$RUN_NAME"
 FILES=()
-while IFS= read -r f; do FILES+=("$f"); done < <(find config pipelines -type f -not -name ".*" | sort)
+while IFS= read -r f; do FILES+=("$f"); done < <(find config pipelines src -type f -not -name ".*" -not -path "*/__pycache__/*" | sort)
 for f in "${FILES[@]}"; do
     aws s3 cp "$f" "$BUNDLE/$f" --only-show-errors
 done
