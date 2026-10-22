@@ -1,0 +1,6 @@
+# Files Seqera Platform lists on a run's Outputs tab, matched against published files.
+reports:
+  samples.tsv:
+    display: "Sample sheet in methyl-floor's format"
+  "betas/*.parquet":
+    display: "Beta table: one row per CpG cytosine, one column per sample"
