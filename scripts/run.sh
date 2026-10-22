@@ -148,7 +148,8 @@ done
 # single quotes, so the script is passed base64-encoded to keep quoting out of the way.
 HEAD_SCRIPT="set -euo pipefail
 mkdir -p /run-head && cd /run-head
-$(for f in "${FILES[@]}"; do printf 'mkdir -p %q && nextflow fs cp %q %q\n' "$(dirname "$f")" "$BUNDLE/$f" "$f"; done)
+# One loop instead of a line per file keeps the overrides under Batch's 8192-character limit
+for f in $(printf '%q ' "${FILES[@]}"); do mkdir -p \"\$(dirname \"\$f\")\" && nextflow fs cp $(printf '%q' "$BUNDLE")/\"\$f\" \"\$f\"; done
 rc=0; nextflow $(printf '%q ' "${NF_ARGS[@]}") || rc=\$?
 nextflow fs cp .nextflow.log $(printf '%q' "$BUNDLE/nextflow.log") || true
 exit \$rc"
