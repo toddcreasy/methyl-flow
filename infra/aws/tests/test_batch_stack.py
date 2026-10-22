@@ -237,3 +237,49 @@ def test_head_role_reads_igenomes(template: Template) -> None:
     policies = json.dumps(template.find_resources("AWS::IAM::Policy"))
     assert "arn:aws:s3:::ngi-igenomes" in policies
     assert "arn:aws:s3:::ngi-igenomes/*" in policies
+
+
+def seqera_role(template: Template) -> dict:
+    roles = template.find_resources(
+        "AWS::IAM::Role", {"Properties": {"RoleName": "methyl-flow-seqera"}}
+    )
+    assert len(roles) == 1
+    return next(iter(roles.values()))["Properties"]
+
+
+def test_seqera_role_trusts_only_seqera_with_external_id(template: Template) -> None:
+    statements = seqera_role(template)["AssumeRolePolicyDocument"]["Statement"]
+    assume = next(s for s in statements if s["Action"] == "sts:AssumeRole")
+    assert assume["Principal"] == {
+        "AWS": "arn:aws:iam::161471496260:role/SeqeraPlatformCloudAccessRole"
+    }
+    assert assume["Condition"] == {"StringEquals": {"sts:ExternalId": "pending-seqera-external-id"}}
+
+    app = cdk.App(context={"seqera_external_id": "abc123"})
+    deployed = Template.from_stack(BatchStack(app, "SeqeraIdStack"))
+    statements = seqera_role(deployed)["AssumeRolePolicyDocument"]["Statement"]
+    assume = next(s for s in statements if s["Action"] == "sts:AssumeRole")
+    assert assume["Condition"] == {"StringEquals": {"sts:ExternalId": "abc123"}}
+
+
+def test_seqera_role_cannot_create_infrastructure(template: Template) -> None:
+    policies = template.find_resources("AWS::IAM::Policy")
+    seqera = [
+        p
+        for p in policies.values()
+        if any("SeqeraRole" in r["Ref"] for r in p["Properties"]["Roles"])
+    ]
+    actions = json.dumps(seqera)
+    assert "batch:SubmitJob" in actions
+    assert "iam:PassRole" in actions
+    for forbidden in ("batch:CreateComputeEnvironment", "batch:CreateJobQueue", "iam:CreateRole"):
+        assert forbidden not in actions
+
+
+def test_ami_pinned_from_context() -> None:
+    app = cdk.App(context={"ami_id": "ami-0123456789abcdef0"})
+    stack = BatchStack(app, "PinnedAmiStack", env=cdk.Environment(region="us-east-1"))
+    Template.from_stack(stack).has_resource_properties(
+        "AWS::EC2::LaunchTemplate",
+        {"LaunchTemplateData": Match.object_like({"ImageId": "ami-0123456789abcdef0"})},
+    )

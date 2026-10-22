@@ -19,6 +19,7 @@
   "context": {
     "max_vcpus": 256,
     "root_volume_gb": 200,
+    "ami_id": "ami-07d4544a1fdee86a1",
     "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": true,
     "@aws-cdk/aws-apigateway:authorizerChangeDeploymentLogicalId": true,
     "@aws-cdk/aws-apigateway:disableCloudWatchRole": true,

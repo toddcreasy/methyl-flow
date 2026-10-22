@@ -64,6 +64,13 @@ HEAD_JOB_ACTIONS = [
 
 MONTHLY_BUDGET_USD = 50
 
+# Seqera Cloud assumes customer roles from this role
+# (https://docs.seqera.io/platform-cloud/compute-envs/aws-batch, IAM role-based credentials).
+SEQERA_CLOUD_PRINCIPAL = "arn:aws:iam::161471496260:role/SeqeraPlatformCloudAccessRole"
+# Seqera generates the external ID only after the credential is saved with this role's ARN, so
+# the first deploy uses a placeholder Seqera never presents; redeploy with -c seqera_external_id.
+SEQERA_EXTERNAL_ID_PLACEHOLDER = "pending-seqera-external-id"
+
 MINICONDA_INSTALL_DIR = "/home/ec2-user/miniconda"
 MINIFORGE_URL = (
     "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh"
@@ -148,10 +155,19 @@ class BatchStack(Stack):
             install_commands, ec2.MultipartBody.SHELL_SCRIPT, make_default=True
         )
 
+        # A new AMI rolls every Batch instance, stopping running jobs after 30 minutes, so
+        # cdk.json pins it; drop ami_id to resolve the latest ECS-optimized AL2023 AMI.
+        ami_id = self.node.try_get_context("ami_id")
+        machine_image = (
+            ec2.MachineImage.generic_linux({self.region: ami_id})
+            if ami_id
+            else ecs.EcsOptimizedImage.amazon_linux2023(ecs.AmiHardwareType.STANDARD)
+        )
+
         launch_template = ec2.LaunchTemplate(
             self,
             "LaunchTemplate",
-            machine_image=ecs.EcsOptimizedImage.amazon_linux2023(ecs.AmiHardwareType.STANDARD),
+            machine_image=machine_image,
             block_devices=[
                 ec2.BlockDevice(
                     device_name="/dev/xvda",
@@ -284,6 +300,70 @@ class BatchStack(Stack):
             ),
         )
 
+        # --- Seqera Platform ---------------------------------------------------
+        # Role Seqera Cloud assumes for a manual compute environment on the queues above.
+        # It submits and watches head jobs and reads logs and the bucket; it creates no
+        # Batch or IAM resources. The head job it launches runs as head_role.
+        seqera_role = iam.Role(
+            self,
+            "SeqeraRole",
+            role_name="methyl-flow-seqera",
+            assumed_by=iam.ArnPrincipal(SEQERA_CLOUD_PRINCIPAL),
+            external_ids=[
+                self.node.try_get_context("seqera_external_id") or SEQERA_EXTERNAL_ID_PLACEHOLDER
+            ],
+            description="Seqera Platform credential for the methyl-flow Batch queues",
+        )
+        seqera_role.assume_role_policy.add_statements(
+            iam.PolicyStatement(
+                actions=["sts:TagSession"],
+                principals=[iam.ArnPrincipal(SEQERA_CLOUD_PRINCIPAL)],
+            )
+        )
+        seqera_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "batch:DescribeComputeEnvironments",
+                    "batch:DescribeJobDefinitions",
+                    "batch:DescribeJobQueues",
+                    "batch:DescribeJobs",
+                ],
+                resources=["*"],
+            )
+        )
+        seqera_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "batch:CancelJob",
+                    "batch:RegisterJobDefinition",
+                    "batch:SubmitJob",
+                    "batch:TagResource",
+                    "batch:TerminateJob",
+                ],
+                resources=[
+                    spot_queue.job_queue_arn,
+                    ondemand_queue.job_queue_arn,
+                    f"arn:aws:batch:{self.region}:{self.account}:job-definition/*",
+                    f"arn:aws:batch:{self.region}:{self.account}:job/*",
+                ],
+            )
+        )
+        head_role.grant_pass_role(seqera_role)
+        seqera_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "logs:Describe*",
+                    "logs:FilterLogEvents",
+                    "logs:Get*",
+                    "logs:List*",
+                    "logs:StartQuery",
+                    "logs:StopQuery",
+                ],
+                resources=[f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws/batch/job*"],
+            )
+        )
+        bucket.grant_read(seqera_role)
+
         # --- Cost guardrail -----------------------------------------------------
         # Alerts only; nothing is stopped. Filters on the project cost allocation
         # tag, so it counts only this stack's resources. ALERT_EMAIL comes from
@@ -328,6 +408,8 @@ class BatchStack(Stack):
         CfnOutput(self, "Region", value=self.region)
         CfnOutput(self, "HeadJobDefinitionName", value=head_job.job_definition_name)
         CfnOutput(self, "TowerSecretName", value=tower_secret.secret_name)
+        CfnOutput(self, "SeqeraRoleArn", value=seqera_role.role_arn)
+        CfnOutput(self, "HeadJobRoleArn", value=head_role.role_arn)
         CfnOutput(
             self,
             "EnvSnippet",

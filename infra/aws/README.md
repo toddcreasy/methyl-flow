@@ -51,6 +51,27 @@ Context defaults (override with `cdk deploy -c max_vcpus=128`):
 - `max_vcpus` (default `256`): ceiling for each compute environment
 - `root_volume_gb` (default `200`): root EBS (Elastic Block Store) volume on Batch instances
 - `bucket_name` (default unset): use an existing bucket instead of creating one
+- `ami_id` (pinned in `cdk.json`): Batch instance AMI (Amazon Machine Image). A new AMI rolls every
+  instance and stops running jobs after 30 minutes, so change it only when the queues are idle.
+  Remove it to resolve the latest ECS (Elastic Container Service) optimized Amazon Linux 2023 AMI.
+- `seqera_external_id` (in `cdk.context.json`): external ID Seqera generated for the
+  `methyl-flow-aws-role` credential. Without it the `methyl-flow-seqera` role falls back to a
+  placeholder and Seqera loses access on the next deploy.
+
+## Seqera Platform
+
+`methyl-flow-seqera` is the IAM (Identity and Access Management) role behind the Seqera Platform
+credential `methyl-flow-aws-role` and the manual compute environment `methyl-flow-aws-batch`
+(head queue `methyl-flow-ondemand`, compute queue `methyl-flow-spot`, head job role from the
+`HeadJobRoleArn` output, 2 CPUs and 6144 MiB (mebibytes) for the head job). Only Seqera Cloud's
+`SeqeraPlatformCloudAccessRole` can assume it, and only with the external ID. It submits and
+watches jobs on the two queues, passes the head job role, and reads logs and the bucket; it
+creates no Batch or IAM resources.
+
+Seqera generates the external ID when the credential is saved, which needs the role's ARN
+(Amazon Resource Name) first. So the first deploy uses a placeholder; save the credential with the
+`SeqeraRoleArn` output, then redeploy with `-c seqera_external_id=<id>` and keep that value in
+`cdk.context.json`.
 
 ## Wire it into the repo
 
