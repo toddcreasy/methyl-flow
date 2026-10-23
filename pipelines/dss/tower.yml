@@ -1,5 +1,7 @@
 # Files Seqera Platform lists on a run's Outputs tab, matched against published files.
 reports:
+  igv/igv_report.html:
+    display: "Genome browser view of the strongest DMRs"
   report.html:
     display: "Interactive DMR report: summary, volcano, DMR table, per-patient view"
   summary.tsv:

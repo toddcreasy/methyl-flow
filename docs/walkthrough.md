@@ -133,7 +133,7 @@ Three more terms:
 
 DSS's `callDMR` joins sites below a p-value cutoff into regions, but has no region-level FDR (false discovery rate). The cutoff is set to the smallest p-value among non-significant sites, so a DMR (differentially methylated region) is built only from sites at FDR (false discovery rate) < 5%; regions need at least 3 of them. `r/tests/test_dss.R` plants a region (tumor 90% methylated, normal 10%) in synthetic data and checks the test finds it, and finds nothing when nothing is planted. CI (continuous integration) runs it in the same DSS (Dispersion Shrinkage for Sequencing data) 2.58.0 container as AWS (Amazon Web Services) Batch.
 
-Results (run `dss_gse95654_20m_20261023-153721`, about 5 minutes of compute; an earlier run of the same code gave identical numbers):
+Results (run `dss_gse95654_20m_20261023-155519`, about 5 minutes of compute; two earlier runs of the same code gave identical numbers):
 
 - **718,148 sites tested**, six times the 121,264 at the 10-read cutoff. The single-end patients cover the fewest sites (2.8 to 3.3 million at 5 reads, against 3.9 to 4.9 million), so they limit the all-sample filter most.
 - **168,747 sites at FDR (false discovery rate) < 5%** (23.5%): 123,302 lower in tumor, 45,445 higher.
@@ -174,3 +174,11 @@ The first run failed on the checksum, and correctly. UCSC (University of Califor
 The prediction holds in both directions. Gains concentrate in islands (2.45 times the background) and promoters (1.62 times), and almost never fall in open sea (0.08 times). Losses do the reverse: islands at 0.19 times, open sea at 1.51 times, intergenic at 1.62 times. All FDR (false discovery rate)-significant sites, not only those inside DMRs (differentially methylated regions), show the same split: 74.6% in islands for gains, 4.7% for losses. So it doesn't depend on how regions were called.
 
 By region, 83.9% of the 2,604 DMRs that gain methylation are in islands and 51.7% overlap a promoter; of the 8,343 that lose it, 6.6% and 8.0%. 10 of the 12 strongest DMRs sit on a promoter. `dmrs_annotated.tsv` and the DMR (differentially methylated region) report list each region's nearest gene. That is a position, not a function: no expression data was measured here, so a DMR at a promoter suggests, but doesn't show, that the gene is switched off.
+
+## 11. Genome browser view
+
+`src/methyl_flow/igv_tracks.py` and igv-reports, the `IGV_TRACKS` and `IGV_REPORT` steps of the `dss` pipeline.
+
+A genome browser stacks data as tracks along a chromosome, so a DMR (differentially methylated region) can be seen next to the sites it was built from, the CpG (cytosine followed by guanine) island it sits in, and the nearest gene. `igv_tracks.py` picks the 25 strongest DMRs in each direction and writes, for windows of 2,000 bases around them: mean normal and mean tumor methylation at every tested site (bedGraph, a position-plus-value format), the DMRs as two BED (genomic interval) tracks, one per direction, the islands, and the protein-coding GENCODE transcripts. igv-reports (1.16.0, from BioContainers) turns that into one HTML (web page) file with an IGV (Integrative Genomics Viewer) panel per region and a table to pick from. It embeds only the windowed data, so the file is 257 KB; the genome sequence streams from UCSC (University of California, Santa Cruz) when the page opens.
+
+Two fixes came from rendering it: igv.js ignored per-region colors in a single DMR track, hence one track per direction; and igv-reports labels its table "Variants", which the pipeline relabels.
