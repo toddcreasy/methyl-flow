@@ -42,8 +42,11 @@ ATTRIBUTE = re.compile(r'(\w+) "([^"]*)"')
 
 
 def md5(path: Path, decompress: bool = False) -> str:
-    """MD5 of a file, or of its decompressed content when ``decompress`` is set."""
-    digest = hashlib.md5()
+    """MD5 of a file, or of its decompressed content when ``decompress`` is set.
+
+    Integrity check against published checksums, not a security measure.
+    """
+    digest = hashlib.md5(usedforsecurity=False)
     with gzip.open(path, "rb") if decompress else path.open("rb") as f:
         for block in iter(lambda: f.read(1 << 20), b""):
             digest.update(block)
