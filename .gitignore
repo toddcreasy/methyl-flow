@@ -37,3 +37,6 @@ logs/
 infra/aws/cdk.out/
 infra/aws/cdk.context.json
 infra/aws/cdk-outputs.json
+
+# Personal notes
+TODO.md

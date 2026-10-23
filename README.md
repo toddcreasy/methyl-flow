@@ -85,8 +85,10 @@ Each run writes to `results/<pipeline>/<run ID>/` in the S3 (Amazon Simple Stora
 - `dml.tsv.gz`: one row per tested CpG (cytosine followed by guanine) site with the test statistic, p-value, FDR (false discovery rate), and mean beta in normal and tumor.
 - `dmrs.tsv`: one row per DMR (differentially methylated region), strongest first: position, length, number of CpG (cytosine followed by guanine) sites, area statistic (the sum of its sites' test statistics), and mean beta in normal and tumor.
 - `dmr_samples.tsv`: mean beta over each DMR's (differentially methylated region's) sites, per sample, for the per-patient plots.
+- `dmrs_annotated.tsv`: each DMR (differentially methylated region) with its CpG (cytosine followed by guanine) island context, whether it overlaps a promoter, the nearest protein-coding gene, and the distance to that gene's TSS (transcription start site).
+- `annotation_enrichment.tsv`: the share of tested, significant, and DMR (differentially methylated region) sites in each CpG (cytosine followed by guanine) island and gene context, with fold change against all tested sites.
 - `summary.tsv`: sites tested, significant sites, and DMRs (differentially methylated regions), by direction.
-- `plots/`: `volcano.png` and `top_dmrs.png`. `report.html`: an interactive version, with a sortable table of the 500 strongest DMRs (differentially methylated regions).
+- `plots/`: `volcano.png`, `top_dmrs.png`, and `annotation.png`. `report.html`: an interactive version, with a sortable table of the 500 strongest DMRs (differentially methylated regions) and their nearest genes.
 
 ## Results
 
@@ -130,6 +132,20 @@ A quarter of sites passing is a lot, so it was checked before being trusted. The
 
 *The 12 strongest DMRs (differentially methylated regions) all gain methylation in tumor, from 0.21 to 0.63 on average: dense CpG (cytosine followed by guanine) clusters going from mostly unmethylated to mostly methylated. Losses are more common (8,343 of 10,947) but individually weaker. The tumor that gains least is P15 in all 12 panels; its tumor lost the most methylation overall (61.7% to 31.1% of CpG (cytosine followed by guanine) calls). P42 is among the two lowest in 7 panels and follows the DMR (differentially methylated region) direction in 80% of all DMRs, against 94% to 99% for every other patient; its tumor also sat with the normals in the PCA (principal component analysis).*
 
+### Where the DMRs fall
+
+Each DMR (differentially methylated region) was placed against GENCODE release 50 protein-coding genes and UCSC (University of California, Santa Cruz) hg38 CpG (cytosine followed by guanine) islands. A promoter is within 1,000 bases of a TSS (transcription start site); a shore is within 2,000 bases of an island, a shelf 2,000 to 4,000, and open sea beyond. RRBS (reduced representation bisulfite sequencing) already over-samples islands, so DMR sites are compared with all 718,148 tested sites, not with the genome.
+
+| Sites | CpG island | Open sea | Promoter | Intergenic |
+|---|---|---|---|---|
+| All tested | 33.8% | 47.3% | 30.1% | 32.0% |
+| In DMRs, higher in tumor (35,040) | 82.9% (2.45x) | 3.9% (0.08x) | 48.7% (1.62x) | 24.7% (0.77x) |
+| In DMRs, lower in tumor (54,067) | 6.4% (0.19x) | 71.2% (1.51x) | 7.1% (0.24x) | 51.8% (1.62x) |
+
+![Share of tested, significant, and DMR sites in each CpG island and gene context](docs/images/annotation.png)
+
+*Gains in tumor sit in CpG (cytosine followed by guanine) islands and promoters; losses sit in open sea and between genes. That is the pattern expected in colorectal cancer, found here without being looked for: the test knew nothing about islands or genes. By region, 83.9% of the 2,604 DMRs (differentially methylated regions) that gain methylation are in islands and 51.7% overlap a promoter, against 6.6% and 8.0% of the 8,343 that lose it. 10 of the 12 strongest DMRs sit on a promoter; the nearest genes are in `dmrs_annotated.tsv` and the DMR (differentially methylated region) report.*
+
 ### Interactive reports
 
 GitHub shows HTML (web page) files as source, so download them and open them in a browser. The QC (quality control) and DMR (differentially methylated region) reports load their charting library from a CDN (content delivery network); the others are self-contained.
@@ -140,7 +156,7 @@ GitHub shows HTML (web page) files as source, so download them and open them in 
 | [`multiqc_report.html`](docs/reports/gse95654_20m/multiqc_report.html) | methylseq's MultiQC (combined quality control) report: read quality, trimming, alignment, and methylation per sample |
 | [`methylseq_execution_report.html`](docs/reports/gse95654_20m/methylseq_execution_report.html), [`methylseq_execution_timeline.html`](docs/reports/gse95654_20m/methylseq_execution_timeline.html) | Nextflow's run time, CPU, and memory per task for the resumed methylseq run |
 | [`qc_execution_report.html`](docs/reports/gse95654_20m/qc_execution_report.html), [`qc_execution_timeline.html`](docs/reports/gse95654_20m/qc_execution_timeline.html) | The same for the QC (quality control) run |
-| [`dmr_report.html`](docs/reports/gse95654_20m/dmr_report.html) | The differential methylation report: counts, volcano, sortable table of the 500 strongest DMRs (differentially methylated regions), and each DMR's normal and tumor values per patient |
+| [`dmr_report.html`](docs/reports/gse95654_20m/dmr_report.html) | The differential methylation report: counts, volcano, where the DMRs (differentially methylated regions) fall relative to CpG (cytosine followed by guanine) islands and genes, a sortable table of the 500 strongest DMRs with their nearest genes, and each DMR's normal and tumor values per patient |
 | [`dss_execution_report.html`](docs/reports/gse95654_20m/dss_execution_report.html), [`dss_execution_timeline.html`](docs/reports/gse95654_20m/dss_execution_timeline.html) | The same for the DSS (Dispersion Shrinkage for Sequencing data) run |
 
 ## Run it
@@ -176,7 +192,7 @@ The `convert`, `qc`, and `dss` params files name the exact upstream run they rea
 - **Tissue, not blood.** These are tumor and normal colon. MCED (multi-cancer early detection) tests read cell-free DNA (deoxyribonucleic acid) from blood, where tumor DNA (deoxyribonucleic acid) is a small fraction of the total; methyl-floor models that dilution.
 - **One batch variable.** Read layout is the only batch recorded. Sequencing run and processing date aren't in the metadata.
 - **Only sites covered in every sample are tested.** Requiring 5 reads in all 18 samples keeps 718,148 sites; the single-end patients cover the fewest, so they limit it most.
-- **DMRs (differentially methylated regions) aren't annotated.** They are positions only, with no genes, promoters, or CpG (cytosine followed by guanine) islands attached.
+- **Annotation is by position.** Each DMR (differentially methylated region) is matched to the nearest protein-coding gene and the CpG (cytosine followed by guanine) island map. That says where a change sits, not what it does to the gene; no expression data was used.
 - **No region-level error rate.** FDR (false discovery rate) controls false calls among sites; a DMR (differentially methylated region) is built from significant sites, but its own false call rate isn't estimated.
 
 ## Layout

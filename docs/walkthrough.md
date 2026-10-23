@@ -2,7 +2,7 @@
 
 How 18 public RRBS (reduced representation bisulfite sequencing) samples became a beta table and a QC (quality control) report, one stage at a time, with the numbers each stage produced and what went wrong. Every stage is one `scripts/run.sh` call on AWS (Amazon Web Services) Batch; each section says which.
 
-All numbers come from real runs recorded in `TODO.md` and from the run files in [`reports/`](reports/).
+All numbers come from real runs, named by run ID in each section; reports from the 20 million read runs are in [`reports/`](reports/).
 
 ## Terms used throughout
 
@@ -133,7 +133,7 @@ Three more terms:
 
 DSS's `callDMR` joins sites below a p-value cutoff into regions, but has no region-level FDR (false discovery rate). The cutoff is set to the smallest p-value among non-significant sites, so a DMR (differentially methylated region) is built only from sites at FDR (false discovery rate) < 5%; regions need at least 3 of them. `r/tests/test_dss.R` plants a region (tumor 90% methylated, normal 10%) in synthetic data and checks the test finds it, and finds nothing when nothing is planted. CI (continuous integration) runs it in the same DSS (Dispersion Shrinkage for Sequencing data) 2.58.0 container as AWS (Amazon Web Services) Batch.
 
-Results (run `dss_gse95654_20m_20261023-141329`, about 6 minutes of compute):
+Results (run `dss_gse95654_20m_20261023-153721`, about 5 minutes of compute; an earlier run of the same code gave identical numbers):
 
 - **718,148 sites tested**, six times the 121,264 at the 10-read cutoff. The single-end patients cover the fewest sites (2.8 to 3.3 million at 5 reads, against 3.9 to 4.9 million), so they limit the all-sample filter most.
 - **168,747 sites at FDR (false discovery rate) < 5%** (23.5%): 123,302 lower in tumor, 45,445 higher.
@@ -151,4 +151,26 @@ A quarter of all sites passing looked too good, so three checks came before trus
 
 More sites lose methylation in tumor than gain it, the genome-wide loss seen in step 7. The strongest regions all gain: dense CpG (cytosine followed by guanine) clusters going from 0.21 to 0.63 on average across the top 12. Two patients stand apart. **P15's** tumor gains least in all 12 top regions; it is also the tumor that lost the most methylation overall (61.7% to 31.1% of CpG (cytosine followed by guanine) calls). **P42** follows the DMR (differentially methylated region) direction in 80% of DMRs, against 94% to 99% for every other patient; its tumor also sat with the normals in the PCA (principal component analysis). Low tumor content in that sample would explain both, but the data can't confirm it.
 
-The DMRs (differentially methylated regions) are positions only. Annotating them with genes, promoters, and CpG (cytosine followed by guanine) islands would be the next step.
+## 10. Where the DMRs fall
+
+`src/methyl_flow/annotate.py`, the `ANNOTATE` step of the same `dss` pipeline.
+
+DMRs (differentially methylated regions) are coordinates. Annotation places them against maps of known features, so a result can be checked against biology. Cancer is expected to gain methylation in CpG (cytosine followed by guanine) islands at promoters, which switches genes off, and to lose it across open sea and gene bodies. The statistical test knew nothing about islands or genes, so finding that pattern is an independent check that the calls are real.
+
+- **Sources:** GENCODE release 50 basic gene annotation, the same release as the reference genome, and UCSC (University of California, Santa Cruz) hg38 CpG (cytosine followed by guanine) islands. Nextflow downloads both; `annotate.py` checks each against a pinned MD5 (Message Digest 5) checksum before use.
+- **Definitions:** a TSS (transcription start site) is the start of a protein-coding transcript, strand-aware. Promoter: within 1,000 bases of a TSS. Gene body: inside a protein-coding gene, not a promoter. Shore: within 2,000 bases of an island; shelf: 2,000 to 4,000; open sea: beyond.
+- **Background:** RRBS (reduced representation bisulfite sequencing) already over-samples islands (33.8% of tested sites are in one), so "most gains are in islands" means nothing by itself. Every group is compared with all 718,148 tested sites.
+
+The first run failed on the checksum, and correctly. UCSC (University of California, Santa Cruz) serves the island file from several mirrors that compressed it at different times: two copies differed in 2 bytes, both inside gzip's timestamp field, with identical content. The check now uses the MD5 (Message Digest 5) of the decompressed content, which every copy shares. GENCODE publishes checksums of its compressed files, so that check is unchanged.
+
+| Sites | CpG island | Open sea | Promoter | Intergenic |
+|---|---|---|---|---|
+| All tested | 33.8% | 47.3% | 30.1% | 32.0% |
+| In DMRs, higher in tumor (35,040) | 82.9% (2.45x) | 3.9% (0.08x) | 48.7% (1.62x) | 24.7% (0.77x) |
+| In DMRs, lower in tumor (54,067) | 6.4% (0.19x) | 71.2% (1.51x) | 7.1% (0.24x) | 51.8% (1.62x) |
+
+![CpG island and gene context of tested, significant, and DMR sites](images/annotation.png)
+
+The prediction holds in both directions. Gains concentrate in islands (2.45 times the background) and promoters (1.62 times), and almost never fall in open sea (0.08 times). Losses do the reverse: islands at 0.19 times, open sea at 1.51 times, intergenic at 1.62 times. All FDR (false discovery rate)-significant sites, not only those inside DMRs (differentially methylated regions), show the same split: 74.6% in islands for gains, 4.7% for losses. So it doesn't depend on how regions were called.
+
+By region, 83.9% of the 2,604 DMRs that gain methylation are in islands and 51.7% overlap a promoter; of the 8,343 that lose it, 6.6% and 8.0%. 10 of the 12 strongest DMRs sit on a promoter. `dmrs_annotated.tsv` and the DMR (differentially methylated region) report list each region's nearest gene. That is a position, not a function: no expression data was measured here, so a DMR at a promoter suggests, but doesn't show, that the gene is switched off.

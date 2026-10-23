@@ -1,10 +1,12 @@
 """Plots and an interactive HTML report from the DSS step's output (``r/dss.R``).
 
-Reads ``dml.tsv.gz`` (one row per tested CpG site), ``dmrs.tsv``, ``dmr_samples.tsv``, and
-``summary.tsv`` from ``--dss``, and writes to ``--out``:
+Reads ``dml.tsv.gz`` (one row per tested CpG site), ``dmr_samples.tsv``, and ``summary.tsv``
+from ``--dss``, plus ``dmrs_annotated.tsv`` and ``annotation_enrichment.tsv`` from ``annotate.py``,
+and writes to ``--out``:
   plots/volcano.png     methylation difference against significance, every tested site
   plots/top_dmrs.png    normal and tumor beta per patient for the strongest DMRs
-  report.html           summary, volcano, sortable DMR table, and a per-DMR patient view
+  plots/annotation.png  CpG island and gene context of significant and DMR sites
+  report.html           summary, volcano, annotation, sortable DMR table, per-DMR patient view
 
 The report embeds a random sample of at most VOLCANO_POINTS sites from each volcano group (higher
 in tumor, lower in tumor, not significant), so it stays small however many sites were tested;
@@ -19,6 +21,7 @@ import logging
 from pathlib import Path
 
 import matplotlib
+import matplotlib.ticker
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
@@ -36,6 +39,23 @@ HYPER, HYPO, NOT_SIG = "#eb6834", "#2a78d6", "#b8b6b0"
 VOLCANO_POINTS = 8_000
 TABLE_ROWS = 500
 TOP_DMRS = 12
+
+GROUP_LABELS = {
+    "tested": "All tested sites",
+    "significant_hypo": "Significant, lower in tumor",
+    "significant_hyper": "Significant, higher in tumor",
+    "dmr_hypo": "In DMRs, lower in tumor",
+    "dmr_hyper": "In DMRs, higher in tumor",
+}
+CONTEXTS = {
+    "CpG context": {
+        "island": "#1d4e89",
+        "shore": "#4f86c6",
+        "shelf": "#9dbfe3",
+        "open_sea": "#e1e7ee",
+    },
+    "Gene context": {"promoter": "#8a3b12", "gene_body": "#d9894f", "intergenic": "#f3dcc7"},
+}
 
 
 def read_tsv(path: Path) -> list[dict]:
@@ -119,6 +139,29 @@ def plot_top_dmrs(dmrs, by_dmr, path):
     plt.close(fig)
 
 
+def plot_annotation(enrichment, path):
+    share = {(r["group"], r["feature"]): float(r["share"]) for r in enrichment}
+    groups = list(GROUP_LABELS)[::-1]
+    fig, axes = plt.subplots(1, 2, figsize=(11, 3.6), sharey=True)
+    for ax, (title, features) in zip(axes, CONTEXTS.items(), strict=True):
+        left = np.zeros(len(groups))
+        for feature, color in features.items():
+            values = np.array([share[(g, feature)] for g in groups])
+            ax.barh(
+                range(len(groups)), values, left=left, color=color, label=feature.replace("_", " ")
+            )
+            left += values
+        ax.set_xlim(0, 1)
+        ax.set_title(title)
+        ax.xaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1))
+        ax.legend(loc="lower center", bbox_to_anchor=(0.5, -0.38), ncol=4, fontsize=8)
+    axes[0].set_yticks(range(len(groups)), [GROUP_LABELS[g] for g in groups])
+    fig.suptitle("Where tested, significant, and DMR sites fall")
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
 PAGE = """<!doctype html>
 <html lang="en">
 <head>
@@ -162,6 +205,18 @@ beta (methylated reads over total reads) from normal to tumor; up is stronger ev
 points pass FDR (false discovery rate) &lt; {fdr}, meaning about {fdr_pct} of them are expected to
 be false calls. {volcano_note}</p>
 <div id="volcano" class="chart"></div>
+
+<h2>Where the DMRs fall</h2>
+<p>Share of sites in each CpG (cytosine followed by guanine) context and gene context. RRBS
+(reduced representation bisulfite sequencing) already over-samples CpG islands, so each group is
+compared with all tested sites, not the genome; fold change above 1 means over-represented. CpG
+island: UCSC (University of California, Santa Cruz) hg38 islands; shore: within 2,000 bases;
+shelf: 2,000 to 4,000; open sea: beyond. Promoter: within 1,000 bases of a protein-coding TSS
+(transcription start site) in GENCODE; gene body: inside a protein-coding gene; intergenic:
+neither.</p>
+<div id="annotation" class="chart"></div>
+<div class="wrap"><table id="folds"><thead><tr>{fold_header}</tr></thead><tbody>{fold_rows}
+</tbody></table></div>
 
 <h2>DMRs (differentially methylated regions)</h2>
 <p>Runs of at least {min_cg} nearby FDR (false discovery rate)-significant sites. Area statistic is
@@ -224,14 +279,31 @@ if (window.Plotly) {{
     yaxis: axis({{title: "-log10 p-value"}}),
   }}), cfg);
   if (D.dmrs.length) drawDmr(D.dmrs[0].dmr_id);
+  const panels = Object.entries(D.contexts);
+  const traces = [];
+  panels.forEach(([title, features], i) => Object.entries(features).forEach(([f, color]) => {{
+    traces.push({{
+      type: "bar", orientation: "h", name: f.replace("_", " "), legendgroup: title,
+      y: D.groups.map(g => D.group_labels[g]), x: D.groups.map(g => D.share[g][f]),
+      marker: {{color}}, xaxis: i ? "x2" : "x", yaxis: "y",
+      hovertemplate: "%{{y}}<br>" + f.replace("_", " ") + ": %{{x:.1%}}<extra></extra>",
+    }});
+  }}));
+  Plotly.newPlot("annotation", traces, Object.assign({{}}, base, {{
+    barmode: "stack", margin: {{t: 32, r: 16, b: 48, l: 210}},
+    xaxis: axis({{domain: [0, 0.48], range: [0, 1], tickformat: ".0%", title: panels[0][0]}}),
+    xaxis2: axis({{domain: [0.52, 1], range: [0, 1], tickformat: ".0%", title: panels[1][0]}}),
+    yaxis: axis({{autorange: "reversed"}}), legend: {{orientation: "h", y: 1.12}},
+  }}), cfg);
 }} else {{
   document.querySelectorAll(".chart").forEach(el => {{
     el.style.height = "auto";
     el.textContent = "Charts need a network connection to load Plotly.js.";
   }});
 }}
-document.querySelectorAll("#dmrs th").forEach((th, i) => th.addEventListener("click", () => {{
-  const body = th.closest("table").tBodies[0];
+const sortable = document.querySelectorAll("#dmrs th, #folds th");
+sortable.forEach(th => th.addEventListener("click", () => {{
+  const i = th.cellIndex, body = th.closest("table").tBodies[0];
   const up = th.dataset.dir !== "asc";
   th.parentNode.querySelectorAll("th").forEach(h => delete h.dataset.dir);
   th.dataset.dir = up ? "asc" : "desc";
@@ -254,6 +326,9 @@ COLUMNS = [
     ("beta_normal", "Normal beta"),
     ("beta_tumor", "Tumor beta"),
     ("diff", "Difference"),
+    ("nearest_gene", "Nearest gene"),
+    ("tss_distance", "Distance to TSS (bp)"),
+    ("cpg_context", "CpG context"),
 ]
 
 
@@ -264,6 +339,10 @@ def cell(field: str, value: str) -> str:
         text = f"{float(value):.1f}"
     elif field in ("beta_normal", "beta_tumor", "diff"):
         text = f"{float(value):+.2f}" if field == "diff" else f"{float(value):.2f}"
+    elif field == "tss_distance" and value:
+        text = f"{int(value):+,}"
+    elif field == "cpg_context":
+        text = value.replace("_", " ")
     else:
         text = value
     return f'<td data-v="{html.escape(value)}">{html.escape(text)}</td>'
@@ -277,7 +356,7 @@ def significant_sites(dml: dict[str, np.ndarray], fdr: float) -> np.ndarray:
     return np.nan_to_num(dml["fdr"], nan=1.0) < fdr
 
 
-def write_report(path, title, summary, dml, dmrs, by_dmr, seed=0):
+def write_report(path, title, summary, dml, dmrs, by_dmr, enrichment, seed=0):
     fdr = float(summary["fdr"])
     significant = significant_sites(dml, fdr)
     y = neg_log10(dml["pval"])
@@ -325,7 +404,17 @@ def write_report(path, title, summary, dml, dmrs, by_dmr, seed=0):
             for d in table
         },
         "colors": {**TISSUE_COLORS, "hyper": HYPER, "hypo": HYPO, "ns": NOT_SIG},
+        "groups": list(GROUP_LABELS),
+        "group_labels": GROUP_LABELS,
+        "contexts": CONTEXTS,
+        "share": {
+            g: {r["feature"]: float(r["share"]) for r in enrichment if r["group"] == g}
+            for g in GROUP_LABELS
+        },
     }
+    features = [f for fs in CONTEXTS.values() for f in fs]
+    fold = {(r["group"], r["feature"]): r["fold_vs_tested"] for r in enrichment}
+    sites = {r["group"]: r["sites"] for r in enrichment}
     # R writes the summary as one numeric column, so a large count can come out as "1e+06"
     count = {
         k: int(float(summary[k]))
@@ -374,6 +463,18 @@ def write_report(path, title, summary, dml, dmrs, by_dmr, seed=0):
             + ". volcano.png plots every site."
         ),
         min_cg=count["min_cg"],
+        fold_header="<th>Fold change against all tested sites</th><th>Sites</th>"
+        + "".join(f"<th>{html.escape(f.replace('_', ' '))}</th>" for f in features),
+        fold_rows="".join(
+            f"<tr><td>{html.escape(GROUP_LABELS[g])}</td>"
+            f'<td data-v="{sites[g]}">{int(sites[g]):,}</td>'
+            + "".join(
+                f'<td data-v="{fold[(g, f)]}">{float(fold[(g, f)]):.2f}</td>' for f in features
+            )
+            + "</tr>"
+            for g in GROUP_LABELS
+            if g != "tested"
+        ),
         table_note=html.escape(
             f"Showing the {len(table):,} strongest of {n_dmrs:,}." if n_dmrs > len(table) else ""
         ),
@@ -401,7 +502,8 @@ def main() -> None:
 
     summary = read_summary(args.dss / "summary.tsv")
     dml = read_dml(args.dss / "dml.tsv.gz")
-    dmrs = read_tsv(args.dss / "dmrs.tsv")
+    dmrs = read_tsv(args.dss / "dmrs_annotated.tsv")
+    enrichment = read_tsv(args.dss / "annotation_enrichment.tsv")
     by_dmr: dict[str, dict[str, dict[str, float]]] = {}
     for r in read_tsv(args.dss / "dmr_samples.tsv"):
         by_dmr.setdefault(r["dmr_id"], {}).setdefault(r["patient"], {})[r["tissue"]] = float(
@@ -418,7 +520,8 @@ def main() -> None:
     )
     if dmrs:
         plot_top_dmrs(dmrs, by_dmr, args.out / "plots" / "top_dmrs.png")
-    write_report(args.out / "report.html", args.title, summary, dml, dmrs, by_dmr)
+    plot_annotation(enrichment, args.out / "plots" / "annotation.png")
+    write_report(args.out / "report.html", args.title, summary, dml, dmrs, by_dmr, enrichment)
 
 
 if __name__ == "__main__":

@@ -8,3 +8,12 @@ manifest: config/gse95654/runs.tsv
 min_reads: 5
 fdr: 0.05
 min_cg: 3
+
+# Annotation: GENCODE release 50, the same release as the reference genome, protein-coding genes
+# from the basic set; and UCSC hg38 CpG islands (cpgIslandExt, last modified 2022-10-19).
+# GENCODE's MD5 is from its MD5SUMS file. UCSC's mirrors serve the island file with different gzip
+# headers, so its MD5 is of the decompressed content (computed 2026-10-23, same from every copy).
+gtf: https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_50/gencode.v50.primary_assembly.basic.annotation.gtf.gz
+gtf_md5: 4e6bbda4b74c9033d0f1209581c8b97d
+cpg_islands: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/cpgIslandExt.txt.gz
+cpg_islands_content_md5: 49677259cf172db70a3bf58aaeebd40e

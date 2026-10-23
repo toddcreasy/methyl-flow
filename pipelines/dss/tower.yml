@@ -6,5 +6,9 @@ reports:
     display: "Sites tested, significant sites, and DMRs"
   dmrs.tsv:
     display: "DMRs, strongest first"
+  dmrs_annotated.tsv:
+    display: "DMRs with CpG island context, promoter overlap, and nearest gene"
+  annotation_enrichment.tsv:
+    display: "CpG island and gene context of tested, significant, and DMR sites"
   "plots/*.png":
     display: "DMR plots"
