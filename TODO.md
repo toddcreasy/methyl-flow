@@ -22,9 +22,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 - ⬜ DMR (differentially methylated region) plots.
 - ⬜ Report how many DMRs (differentially methylated regions) survive FDR (false discovery rate) correction.
 
-**F. Limits and docs** (0 of 2 done)
-- ⬜ README limits section: downsampled data, small sample counts, RRBS (reduced representation bisulfite sequencing) covers only CpG-rich (cytosine-guanine-rich) regions.
-- ⬜ One-command run documented in the README.
+**F. Limits and docs** (2 of 2 done)
 
 **Later, optional**
 - ⬜ Array input path: IDAT (Illumina's raw scanner file) files through SeSAMe or minfi (R packages for methylation arrays) into the same beta table format.
@@ -96,7 +94,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 - **Why RRBS (reduced representation bisulfite sequencing) is partial:** it cuts DNA (deoxyribonucleic acid) with an enzyme (MspI) that targets CCGG (cytosine-cytosine-guanine-guanine) sites and keeps the short fragments, so it reads promoters and CpG (a cytosine followed by a guanine) islands well and most of the rest of the genome not at all.
 
-**Status: 🔴 No.** **Build F.**
+**Status: 🟢 Yes.** README "Limits" section (Build F).
 
 ## 3. Build plan
 
@@ -149,8 +147,9 @@ Order follows the brief's order of work.
 - ⬜ Report how many DMRs (differentially methylated regions) survive FDR (false discovery rate) correction.
 
 ### F. Limits and docs (2.4)
-- ⬜ README limits section.
-- ⬜ One-command run documented in the README.
+- ✅ README limits section: downsampled to 20M (million) read pairs, 9 patients, RRBS (reduced representation bisulfite sequencing) covers only CpG-rich (cytosine-guanine-rich) regions, tissue rather than cfDNA (cell-free DNA), read layout as the only recorded batch, no differential methylation yet.
+- ✅ One-command run documented in the README ("Run it"), plus `docs/walkthrough.md` (stage by stage with numbers), `docs/software.md` (every tool and why), and `docs/architecture.svg` (interactive in a browser, drawn by `scripts/make_diagrams.py`).
+- ✅ Interactive reports from every run: `pipelines/qc` writes `report.html` (`src/methyl_flow/report.py`, tested in `tests/test_report.py`); `fetch_sra`, `convert`, and `qc` write Nextflow's execution report, timeline, and trace to `pipeline_info/`. Copies from the 20M (million) read runs are in `docs/reports/gse95654_20m/`.
 
 ## 4. Dataset plan
 

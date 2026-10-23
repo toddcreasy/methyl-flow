@@ -1,5 +1,7 @@
 # Files Seqera Platform lists on a run's Outputs tab, matched against published files.
 reports:
+  report.html:
+    display: "Interactive QC report: table, coverage, methylation, PCA"
   samples_qc.tsv:
     display: "QC summary per sample: conversion rate, duplicate rate, coverage"
   coverage_hist.tsv:

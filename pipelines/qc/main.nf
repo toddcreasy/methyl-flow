@@ -5,8 +5,10 @@
  *   samples_qc.tsv       one row per sample: conversion rate, duplicate rate, coverage
  *   coverage_hist.tsv    sites per read count, per sample
  *   plots/               coverage.png, methylation.png, pca.png, pca.tsv
+ *   report.html          interactive version of the table and plots
  *
- * The work is src/methyl_flow/qc.py and plots.py, tested in tests/test_qc.py and test_plots.py.
+ * The work is src/methyl_flow/qc.py, plots.py, and report.py, tested in tests/test_qc.py,
+ * test_plots.py, and test_report.py.
  */
 
 params.samples           = null   // samples.tsv from a convert run
@@ -56,6 +58,7 @@ process QC_PLOTS {
 
     output:
     path 'plots/*'
+    path 'report.html'
 
     script:
     """
@@ -65,7 +68,9 @@ process QC_PLOTS {
         --betas ${betas} \\
         --min-coverage ${params.min_coverage} \\
         --max-bin ${params.max_bin} \\
-        --out plots
+        --out plots \\
+        --report report.html \\
+        --title '${workflow.runName}'
     """
 }
 
