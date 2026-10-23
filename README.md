@@ -58,6 +58,7 @@ All defined in one CDK (Cloud Development Kit) app, `infra/aws/` ([its README](i
 | **Secrets Manager** | The Seqera Platform token | Only the head job's role can read it; it never sits in a file. |
 | **CloudWatch Logs** | Console output of every job | For failures that happen before Nextflow writes its own log. |
 | **AWS Budgets** | $50 a month, filtered to the `project=methyl-flow` tag | Email at 80% and 100% of spend. |
+| **CloudFront** | Serves the results site from a private bucket (`MethylFlowSiteStack`) | HTTPS (secure HTTP), cached at the edge, and the bucket itself never accepts public requests. |
 | **CloudFormation / CDK (Cloud Development Kit)** | Every resource above | One Python app with tests, deployed with one command. |
 
 Not AWS (Amazon Web Services): Nextflow and nf-core/methylseq (the pipeline), Seqera Platform (live run monitoring), Seqera Containers (pinned images for this repo's pipelines), and GitHub Actions.
@@ -186,6 +187,15 @@ The `convert`, `qc`, and `dss` params files name the exact upstream run they rea
 
 `scripts/make_diagrams.py` redraws `docs/architecture.svg`.
 
+### Results site
+
+`scripts/publish_site.sh` builds a public results hub and uploads it to `MethylFlowSiteStack` (`infra/aws/`): a private S3 (Amazon Simple Storage Service) bucket that only CloudFront (Amazon's content delivery network) can read, served over HTTPS (secure HTTP). The hub (`scripts/make_hub.py`) explains each step with its figures and links to every report; its numbers are read from the run tables in `docs/reports/gse95654_20m/tables/`. The script also makes `thumbnail.png`, a 1200 by 630 pixel screenshot of the hub's top for link previews. Links into this repo appear only while the repo is public.
+
+```bash
+scripts/publish_site.sh --dry-run   # build and list every file, upload nothing
+scripts/publish_site.sh             # upload and refresh CloudFront
+```
+
 ## Limits
 
 - **Downsampled.** 20 million read pairs per sample, of the 29.7 to 38.8 million each paired-end run has (58.9 to 70.4 million reads for the single-end runs). Median coverage is 4 to 7 reads per site.
@@ -206,9 +216,13 @@ pipelines/            this repo's Nextflow pipelines: fetch_sra, convert, qc, ds
 src/methyl_flow/      conversion, QC table, plots, and the interactive reports
 r/                    DSS differential methylation (R, its own renv project) and its tests
 tests/                pytest tests on small fixture files, no network by default
-infra/aws/            CDK stack for AWS Batch, S3, and the Nextflow head job
+infra/aws/            CDK stacks: AWS Batch, S3, and the Nextflow head job; the public results site
 docs/                 walkthrough, software list, architecture diagram, images, reports
 ```
+
+## License
+
+Code is Apache-2.0 (`LICENSE`). The data is public; see the citation below.
 
 ## Data citation
 

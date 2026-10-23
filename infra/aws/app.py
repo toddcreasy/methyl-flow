@@ -3,12 +3,22 @@ import os
 
 import aws_cdk as cdk
 from stacks.batch_stack import BatchStack
+from stacks.site_stack import SiteStack
 
 app = cdk.App()
 
 BatchStack(
     app,
     "MethylFlowBatchStack",
+    env=cdk.Environment(
+        account=os.getenv("CDK_DEFAULT_ACCOUNT"),
+        region=os.getenv("CDK_DEFAULT_REGION"),
+    ),
+)
+
+SiteStack(
+    app,
+    "MethylFlowSiteStack",
     env=cdk.Environment(
         account=os.getenv("CDK_DEFAULT_ACCOUNT"),
         region=os.getenv("CDK_DEFAULT_REGION"),
