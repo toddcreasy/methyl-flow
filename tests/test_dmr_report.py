@@ -39,9 +39,26 @@ def write_dss(tmp_path, dmrs=True):
     (d / "summary.tsv").write_text(
         "metric\tvalue\n" + "".join(f"{k}\t{v}\n" for k, v in summary.items())
     )
-    header = "dmr_id\tchr\tstart\tend\tlength\tn_cpg\tarea_stat\tbeta_normal\tbeta_tumor\tdiff\n"
-    body = "DMR0001\tchr1\t100\t180\t81\t4\t21.5\t0.12\t0.85\t0.73\n" if dmrs else ""
-    (d / "dmrs.tsv").write_text(header + body)
+    header = "dmr_id\tchr\tstart\tend\tlength\tn_cpg\tarea_stat\tbeta_normal\tbeta_tumor\tdiff"
+    header += "\tcpg_context\tpromoter\tnearest_gene\ttss_distance\n"
+    body = "DMR0001\tchr1\t100\t180\t81\t4\t21.5\t0.12\t0.85\t0.73\tisland\tTrue\tA\t-1200\n"
+    (d / "dmrs_annotated.tsv").write_text(header + (body if dmrs else ""))
+    features = ["island", "shore", "shelf", "open_sea", "promoter", "gene_body", "intergenic"]
+    shares = [0.4, 0.2, 0.1, 0.3, 0.3, 0.4, 0.3]
+    (d / "annotation_enrichment.tsv").write_text(
+        "group\tsites\tfeature\tshare\tfold_vs_tested\n"
+        + "".join(
+            f"{g}\t{n}\t{f}\t{s}\t{fold}\n"
+            for g, n, fold in [
+                ("tested", 4, 1.0),
+                ("significant_hyper", 1, 2.5),
+                ("significant_hypo", 1, 0.5),
+                ("dmr_hyper", 1, 2.5),
+                ("dmr_hypo", 0, 0.0),
+            ]
+            for f, s in zip(features, shares, strict=True)
+        )
+    )
     samples = "sample\tdmr_id\tbeta\tsample_id\tpatient\ttissue\n"
     if dmrs:
         samples += "".join(
@@ -72,7 +89,7 @@ def run(monkeypatch, tmp_path, dss):
 def test_report_and_plots(monkeypatch, tmp_path):
     out, page, data = run(monkeypatch, tmp_path, write_dss(tmp_path))
 
-    for name in ["volcano.png", "top_dmrs.png"]:
+    for name in ["volcano.png", "top_dmrs.png", "annotation.png"]:
         assert (out / "plots" / name).read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
     assert "DMR report: dss_run" in page
     # Significant sites split by direction; the rest, including the untested one, are background
@@ -90,6 +107,13 @@ def test_report_and_plots(monkeypatch, tmp_path):
         ("P2", "tumor"),
     }
     assert '<td data-v="0.73">+0.73</td>' in page
+    # Annotation columns in the DMR table, and the fold-change table without the baseline row
+    assert '<td data-v="-1200">-1,200</td>' in page
+    assert '<td data-v="island">island</td>' in page
+    assert "<td>In DMRs, higher in tumor</td>" in page
+    assert "<td>All tested sites</td>" not in page
+    assert data["share"]["tested"]["open_sea"] == 0.3
+    assert set(data["groups"]) == set(dmr_report.GROUP_LABELS)
 
 
 def test_no_dmrs(monkeypatch, tmp_path):

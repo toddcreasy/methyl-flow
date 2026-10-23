@@ -346,10 +346,12 @@ s += [
         DW,
         NH,
         "outside",
-        "GENCODE",
-        "GRCh38, release 50",
-        "Human reference genome, primary assembly with no alternate haplotypes. Checked "
-        "against a pinned MD5 (Message Digest 5) checksum.",
+        "GENCODE + UCSC",
+        "GRCh38, genes, CpG islands",
+        "GENCODE release 50: the human reference genome (primary assembly) for alignment, and "
+        "its gene annotation for DMR annotation. UCSC (University of California, Santa Cruz) "
+        "hg38 CpG islands for DMR annotation. Each checked against a pinned MD5 (Message Digest "
+        "5) checksum.",
         "https://www.gencodegenes.org/human/release_50.html",
     ),
     node(
@@ -450,7 +452,8 @@ s += [
         "methylated and total reads at each CpG (cytosine followed by guanine) site with 5 or "
         "more reads in every sample, pairs each tumor with its own patient's normal, and calls "
         "DMRs (differentially methylated regions) from FDR (false discovery rate)-significant "
-        "sites.",
+        "sites. src/methyl_flow/annotate.py then places each DMR against CpG islands, "
+        "promoters, and the nearest protein-coding gene.",
         REPO + "r/dss.R",
     ),
     node(
@@ -462,8 +465,9 @@ s += [
         "DMR report",
         "report.html, dmrs.tsv",
         "DMRs (differentially methylated regions) built from FDR (false discovery rate)-"
-        "significant sites, a volcano plot, and each DMR's normal and tumor values per patient, "
-        "as an interactive page and tables.",
+        "significant sites, annotated with CpG island context and nearest gene, plus a volcano "
+        "plot, enrichment against all tested sites, and each DMR's normal and tumor values per "
+        "patient, as an interactive page and tables.",
         REPO + "docs/reports",
     ),
     arrow([(C[0] + DW, ma), (C[1], ma)], "reads", C[0] + DW + 6, ma - 6),
