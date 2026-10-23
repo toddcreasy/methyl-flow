@@ -1,0 +1,10 @@
+# Files Seqera Platform lists on a run's Outputs tab, matched against published files.
+reports:
+  samples_qc.tsv:
+    display: "QC summary per sample: conversion rate, duplicate rate, coverage"
+  coverage_hist.tsv:
+    display: "CpG sites per read count, per sample"
+  "plots/*.png":
+    display: "QC plots"
+  plots/pca.tsv:
+    display: "PCA scores behind pca.png"

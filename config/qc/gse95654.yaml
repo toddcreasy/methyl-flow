@@ -1,0 +1,13 @@
+# QC summary and plots for the GSE95654 methylseq run and its converted beta table.
+# Run with: scripts/run.sh qc config/qc/gse95654.yaml
+
+samples: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/convert/convert_gse95654_20261015-074634/samples.tsv
+betas: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/convert/convert_gse95654_20261015-074634/betas/GSE95654.parquet
+splitting_reports: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/methylseq/methylseq_gse95654_20261014-222956/bismark/methylation_calls/splitting_report/*_splitting_report.txt
+coverage: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/methylseq/methylseq_gse95654_20261014-222956/bismark/methylation_calls/methylation_coverage/*.bismark.cov.gz
+fastqc: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/methylseq/methylseq_gse95654_20261014-222956/multiqc/bismark/methyl-flow-GSE95654_multiqc_report_data/multiqc_fastqc.txt
+
+# Same cutoff as config/convert/gse95654.yaml; the coverage plot marks it
+min_coverage: 10
+# Coverage histogram groups every site with this many reads or more into one bin
+max_bin: 100

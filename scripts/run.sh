@@ -4,7 +4,7 @@
 #   scripts/run.sh <pipeline> <params-file> [--compute aws|local|slurm] [--run-id <id>] [--resume <session-id>] [extra nextflow args]
 #
 # Pipelines: methylseq (nf-core/methylseq 4.2.0), fetch_sra (pipelines/fetch_sra),
-# convert (pipelines/convert).
+# convert (pipelines/convert), qc (pipelines/qc).
 # Each run gets a run ID (<params file name>_<YYYYMMDD-HHMMSS>) used as the Nextflow
 # run name and the output folder: <results>/<pipeline>/<run ID>/.
 #
@@ -15,6 +15,7 @@
 #   scripts/run.sh fetch_sra config/fetch_sra/gse95654.yaml
 #   scripts/run.sh methylseq config/methylseq/gse95654.yaml
 #   scripts/run.sh convert config/convert/gse95654.yaml
+#   scripts/run.sh qc config/qc/gse95654.yaml
 #   scripts/run.sh methylseq config/methylseq/test.yaml
 #   scripts/run.sh methylseq config/methylseq/gse95654.yaml --resume <session-id>
 
@@ -23,7 +24,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [[ $# -ge 2 ]] || usage
 PIPELINE="$1"; PARAMS_FILE="$2"; shift 2
@@ -53,8 +54,8 @@ export NXF_VER=25.04.0
 case "$PIPELINE" in
     methylseq) REPO=nf-core/methylseq; REVISION=(-r 4.2.0) ;;
     # This repo's own pipeline, run from its folder at the checked-out commit
-    fetch_sra|convert) REPO=pipelines/$PIPELINE; REVISION=() ;;
-    *) echo "Unknown pipeline: $PIPELINE (use methylseq, fetch_sra, or convert)" >&2; exit 1 ;;
+    fetch_sra|convert|qc) REPO=pipelines/$PIPELINE; REVISION=() ;;
+    *) echo "Unknown pipeline: $PIPELINE (use methylseq, fetch_sra, convert, or qc)" >&2; exit 1 ;;
 esac
 
 [[ -f "$PARAMS_FILE" ]] || { echo "Params file not found: $PARAMS_FILE" >&2; exit 1; }
@@ -147,7 +148,8 @@ done
 # single quotes, so the script is passed base64-encoded to keep quoting out of the way.
 HEAD_SCRIPT="set -euo pipefail
 mkdir -p /run-head && cd /run-head
-$(for f in "${FILES[@]}"; do printf 'mkdir -p %q && nextflow fs cp %q %q\n' "$(dirname "$f")" "$BUNDLE/$f" "$f"; done)
+# One loop instead of a line per file keeps the overrides under Batch's 8192-character limit
+for f in $(printf '%q ' "${FILES[@]}"); do mkdir -p \"\$(dirname \"\$f\")\" && nextflow fs cp $(printf '%q' "$BUNDLE")/\"\$f\" \"\$f\"; done
 rc=0; nextflow $(printf '%q ' "${NF_ARGS[@]}") || rc=\$?
 nextflow fs cp .nextflow.log $(printf '%q' "$BUNDLE/nextflow.log") || true
 exit \$rc"
