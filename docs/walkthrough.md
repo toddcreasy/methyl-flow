@@ -116,8 +116,39 @@ Every run writes interactive HTML (web page) reports next to its output. Copies 
 
 - methylseq's MultiQC (combined quality control) report: every tool's per-sample metrics in one page.
 - The QC (quality control) report from `src/methyl_flow/report.py`: the sortable per-sample table, then coverage, methylation, and PCA (principal component analysis) charts with hover.
-- Nextflow's execution report and timeline for methylseq and for QC (quality control): run time, CPU, and memory per task.
+- The DMR (differentially methylated region) report from `src/methyl_flow/dmr_report.py`: counts, volcano, a sortable table of the 500 strongest DMRs (differentially methylated regions), and each one's normal and tumor values per patient.
+- Nextflow's execution report and timeline for methylseq, QC (quality control), and DSS (Dispersion Shrinkage for Sequencing data): run time, CPU, and memory per task.
 
-## Next: differential methylation (Build E)
+## 9. Differential methylation
 
-DSS (Dispersion Shrinkage for Sequencing data), in R, will test each CpG (cytosine followed by guanine) site for a tumor versus normal difference, then call DMRs (differentially methylated regions): runs of nearby sites that change together. Thousands of tests mean some look significant by chance, so the count that matters is how many DMRs (differentially methylated regions) survive FDR (false discovery rate) correction. DSS (Dispersion Shrinkage for Sequencing data) will read methylated and total counts per site, not beta values, because a beta from 4 reads and a beta from 40 reads deserve different weight.
+`scripts/run.sh dss config/dss/gse95654_20m.yaml`
+
+Three more terms:
+
+- **Dispersion:** sample-to-sample spread in methylation beyond the coin-flip noise of sampling reads. DSS (Dispersion Shrinkage for Sequencing data) estimates it per site, then pulls each estimate toward the average across sites, because 9 pairs can't pin it down site by site.
+- **FDR (false discovery rate):** the expected share of false calls among everything called significant. If no site had a real difference, testing 718,148 sites at p < 0.05 would still flag about 36,000 by chance; Benjamini-Hochberg correction raises the bar so that among the reported sites, about 5% are false.
+- **DMR (differentially methylated region):** a run of nearby sites that change together. More stable than single sites, and closer to how methylation is regulated.
+
+`r/dss.R` reads the methylseq coverage files directly. It uses read counts, not beta values, because a beta of 0.5 from 4 reads and from 40 reads deserve different weight. It keeps sites with at least 5 reads in all 18 samples, fits `~ patient + tissue` with DSS's multifactor model, and tests the tissue term. The patient term makes this a paired test: each tumor is compared with its own patient's normal, so differences between patients, read layout included, drop out. That design gives up DSS's smoothing across neighboring sites, which only its two-group test has.
+
+DSS's `callDMR` joins sites below a p-value cutoff into regions, but has no region-level FDR (false discovery rate). The cutoff is set to the smallest p-value among non-significant sites, so a DMR (differentially methylated region) is built only from sites at FDR (false discovery rate) < 5%; regions need at least 3 of them. `r/tests/test_dss.R` plants a region (tumor 90% methylated, normal 10%) in synthetic data and checks the test finds it, and finds nothing when nothing is planted. CI (continuous integration) runs it in the same DSS (Dispersion Shrinkage for Sequencing data) 2.58.0 container as AWS (Amazon Web Services) Batch.
+
+Results (run `dss_gse95654_20m_20261023-141329`, about 6 minutes of compute):
+
+- **718,148 sites tested**, six times the 121,264 at the 10-read cutoff. The single-end patients cover the fewest sites (2.8 to 3.3 million at 5 reads, against 3.9 to 4.9 million), so they limit the all-sample filter most.
+- **168,747 sites at FDR (false discovery rate) < 5%** (23.5%): 123,302 lower in tumor, 45,445 higher.
+- **10,947 DMRs (differentially methylated regions)**: 8,343 lower in tumor, 2,604 higher. Median length 120 bases, median 6 CpG (cytosine followed by guanine) sites, median change 0.31 in beta.
+
+A quarter of all sites passing looked too good, so three checks came before trusting it:
+
+1. **Effect size.** Significant sites change by a median of 0.30 in beta; only 2.7% change by less than 0.10. An inflated test would flag many tiny changes.
+2. **The p-value histogram.** Past the spike near 0, it is flat to slightly rising toward 1, so the test is not anti-conservative (if anything, slightly conservative at sites near 0% or 100% methylation). The flat part puts about 72% of sites at no real difference, so about 28% carry one, in line with the 23.5% called.
+3. **Consistency across patients.** 93.1% of DMRs (differentially methylated regions) move the same way in at least 8 of 9 patients, and 59.1% in all 9.
+
+![Volcano plot of 718,148 CpG sites](images/volcano.png)
+
+![Normal and tumor beta per patient for the 12 strongest DMRs](images/top_dmrs.png)
+
+More sites lose methylation in tumor than gain it, the genome-wide loss seen in step 7. The strongest regions all gain: dense CpG (cytosine followed by guanine) clusters going from 0.21 to 0.63 on average across the top 12. Two patients stand apart. **P15's** tumor gains least in all 12 top regions; it is also the tumor that lost the most methylation overall (61.7% to 31.1% of CpG (cytosine followed by guanine) calls). **P42** follows the DMR (differentially methylated region) direction in 80% of DMRs, against 94% to 99% for every other patient; its tumor also sat with the normals in the PCA (principal component analysis). Low tumor content in that sample would explain both, but the data can't confirm it.
+
+The DMRs (differentially methylated regions) are positions only. Annotating them with genes, promoters, and CpG (cytosine followed by guanine) islands would be the next step.

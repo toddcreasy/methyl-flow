@@ -16,11 +16,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 **D. QC (quality control) summary and plots** (4 of 4 done)
 
-**E. Differential methylation** (0 of 4 done)
-- ⬜ R (statistics language) environment pinned with renv (R package lockfile tool); code, `renv.lock`, and R library all in `r/`.
-- ⬜ DSS (Dispersion Shrinkage for Sequencing data) test per CpG (a cytosine followed by a guanine) site between groups, then DMR (differentially methylated region) calling.
-- ⬜ DMR (differentially methylated region) plots.
-- ⬜ Report how many DMRs (differentially methylated regions) survive FDR (false discovery rate) correction.
+**E. Differential methylation** (4 of 4 done)
 
 **F. Limits and docs** (2 of 2 done)
 
@@ -67,14 +63,14 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 - **Dispersion:** extra spread between samples beyond counting noise. DSS (Dispersion Shrinkage for Sequencing data) pulls each site's noisy estimate toward the average across sites.
 - **FDR (false discovery rate):** the expected share of false calls among all calls. Testing thousands of sites makes some look significant by chance; multiple-testing correction controls it.
 
-**Status: 🟡 Partly.** QC (quality control) summary done (Build D); differential methylation with DSS (Dispersion Shrinkage for Sequencing data) is **Build E.**
+**Status: 🟢 Yes.** QC (quality control) summary (Build D) and differential methylation with DSS (Dispersion Shrinkage for Sequencing data) (Build E).
 
 ### 1.5 Visualize: coverage and methylation distributions, PCA (principal component analysis) by group and batch, DMR (differentially methylated region) plots
 
 - **PCA (principal component analysis):** projects samples onto the directions of largest variation. If samples cluster by batch rather than group, the batch is driving the signal.
 - **Batch effect:** differences from how samples were processed (run, lab, date) rather than biology.
 
-**Status: 🟡 Partly.** Coverage and methylation distributions and PCA (principal component analysis) by tissue and batch done (Build D); DMR (differentially methylated region) plots are **Build E.**
+**Status: 🟢 Yes.** Coverage and methylation distributions and PCA (principal component analysis) by tissue and batch (Build D); volcano and per-patient DMR (differentially methylated region) plots (Build E).
 
 ## 2. "What the project must show"
 
@@ -141,10 +137,10 @@ Order follows the brief's order of work.
 - ✅ One command regenerates the table and plots from pipeline output. `scripts/run.sh qc config/qc/gse95654_20m.yaml`, pipeline `pipelines/qc`; `tower.yml` lists the outputs as Seqera Platform reports.
 
 ### E. Differential methylation (1.4, 1.5)
-- ⬜ R (statistics language) environment pinned with renv (R package lockfile tool); code, `renv.lock`, and R library all in `r/`.
-- ⬜ DSS (Dispersion Shrinkage for Sequencing data) test per site, then DMR (differentially methylated region) calling.
-- ⬜ DMR (differentially methylated region) plots.
-- ⬜ Report how many DMRs (differentially methylated regions) survive FDR (false discovery rate) correction.
+- ✅ R (statistics language) environment in `r/`: `renv.lock` pins DSS (Dispersion Shrinkage for Sequencing data) and data.table for local work (R 4.6.1, DSS 2.60.0); runs use the BioContainers image `bioconductor-dss:2.58.0--r45h01b2380_0` (R 4.5.2, DSS 2.58.0), the version of record. `r/tests/test_dss.R` (base R, planted region) passes in both; CI (continuous integration) runs it in the container.
+- ✅ DSS (Dispersion Shrinkage for Sequencing data) paired test, `~ patient + tissue`, on CpG (a cytosine followed by a guanine) sites with 5+ reads in all 18 samples, then DMRs (differentially methylated regions) from FDR (false discovery rate)-significant sites (at least 3). `r/dss.R`, pipeline `pipelines/dss`, run `dss_gse95654_20m_20261023-141329`: 718,148 sites tested, about 6 minutes of compute.
+- ✅ DMR (differentially methylated region) plots: `volcano.png`, `top_dmrs.png`, and an interactive `report.html` (`src/methyl_flow/dmr_report.py`, tested in `tests/test_dmr_report.py`).
+- ✅ Survivors of FDR (false discovery rate) correction: 168,747 sites at FDR < 5% (23.5%; 123,302 lower in tumor, 45,445 higher) and 10,947 DMRs (differentially methylated regions) (8,343 lower, 2,604 higher). Checked before trusting: median change of significant sites 0.30 in beta (2.7% under 0.10); p-value histogram flat to slightly rising above 0.5, estimated 72% null; 93.1% of DMRs agree in direction in at least 8 of 9 patients. P15's tumor gains least in all 12 top DMRs; P42 follows 80% of DMRs against 94% to 99% for the others.
 
 ### F. Limits and docs (2.4)
 - ✅ README limits section: downsampled to 20M (million) read pairs, 9 patients, RRBS (reduced representation bisulfite sequencing) covers only CpG-rich (cytosine-guanine-rich) regions, tissue rather than cfDNA (cell-free DNA), read layout as the only recorded batch, no differential methylation yet.

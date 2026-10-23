@@ -21,3 +21,13 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest
+
+  r-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # The same DSS image pipelines/dss runs on AWS Batch
+      - run: >
+          docker run --rm -v "$PWD/r:/r:ro" -w /r
+          quay.io/biocontainers/bioconductor-dss:2.58.0--r45h01b2380_0
+          Rscript --no-init-file tests/test_dss.R

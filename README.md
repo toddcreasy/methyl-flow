@@ -1,6 +1,6 @@
 # methyl-flow
 
-Turn raw bisulfite sequencing reads into a methylation beta table, a QC (quality control) report, and (next) a list of differentially methylated regions. Processing runs nf-core/methylseq, pinned, on AWS (Amazon Web Services) Batch; this repo adds the download, the conversion to a shared beta table, the QC (quality control) summary, and interactive reports.
+Turn raw bisulfite sequencing reads into a methylation beta table, a QC (quality control) report, and a list of DMRs (differentially methylated regions) between tumor and normal tissue. Processing runs nf-core/methylseq, pinned, on AWS (Amazon Web Services) Batch; this repo adds the download, the conversion to a shared beta table, the QC (quality control) summary, the differential methylation test, and interactive reports.
 
 ![PCA of 18 colorectal samples: 8 of 9 tumors separate from the normals on PC1, and read layout does not split them](docs/images/pca.png)
 
@@ -26,7 +26,7 @@ methyl-flow runs that end to end, one `scripts/run.sh` call per step:
 | Process | `scripts/run.sh methylseq <params>` | nf-core/methylseq 4.2.0: read trimming, Bismark alignment, methylation calling | Per-sample coverage files, MultiQC (combined quality control) report |
 | Convert | `scripts/run.sh convert <params>` | Turns Bismark coverage files into one table of beta values, sites by samples | `betas/<study>.parquet`, `samples.tsv` |
 | QC (quality control) | `scripts/run.sh qc <params>` | Bisulfite conversion rate, duplicate rate, and coverage per sample; coverage, methylation, and PCA (principal component analysis) plots | `samples_qc.tsv`, plots, `report.html` |
-| Differential methylation | planned (Build E) | DSS (Dispersion Shrinkage for Sequencing data) in R: tumor versus normal per site, then DMRs (differentially methylated regions) | |
+| Differential methylation | `scripts/run.sh dss <params>` | DSS (Dispersion Shrinkage for Sequencing data) in R: tumor against its own patient's normal at each CpG (cytosine followed by guanine) site, then DMRs (differentially methylated regions) from the FDR (false discovery rate)-significant sites | `dml.tsv.gz`, `dmrs.tsv`, plots, `report.html` |
 
 Each step reads the last one's output from S3 (Amazon Simple Storage Service), so the params files in `config/` chain them together.
 
@@ -43,9 +43,9 @@ No reads are stored in git or on the laptop. `fetch_sra` writes them straight to
 
 ## How it fits together
 
-<img src="docs/architecture.svg" alt="methyl-flow architecture. Top: a laptop runs scripts/run.sh, which uploads a run bundle to S3 and submits a Nextflow head job to AWS Batch; the head job starts one Spot task job per pipeline task, reads and writes S3, gets the Seqera token from Secrets Manager, and streams progress to Seqera Platform. cdk deploy creates the stack through CloudFormation. Middle: SRA and GENCODE feed fetch_sra, then nf-core/methylseq, which produces the MultiQC report and coverage files; convert turns those into the beta table methyl-floor reads; qc writes the QC report; DSS and DMR calling are planned. Bottom: pre-commit, pull requests, GitHub Actions, and pytest." width="100%">
+<img src="docs/architecture.svg" alt="methyl-flow architecture. Top: a laptop runs scripts/run.sh, which uploads a run bundle to S3 and submits a Nextflow head job to AWS Batch; the head job starts one Spot task job per pipeline task, reads and writes S3, gets the Seqera token from Secrets Manager, and streams progress to Seqera Platform. cdk deploy creates the stack through CloudFormation. Middle: SRA and GENCODE feed fetch_sra, then nf-core/methylseq, which produces the MultiQC report and coverage files; convert turns those into the beta table methyl-floor reads; qc writes the QC report; dss reads the coverage counts and writes the DMR report. Bottom: pre-commit, pull requests, GitHub Actions, pytest, and the R tests." width="100%">
 
-The laptop only submits. `scripts/run.sh` uploads `config/`, `pipelines/`, and `src/` to S3 (Amazon Simple Storage Service), then starts Nextflow itself as an AWS (Amazon Web Services) Batch job on an on-demand queue, so the laptop can close and a Spot reclaim can't kill the whole run. Nextflow sends every task to a Spot queue that scales from zero to 256 vCPUs (virtual CPUs) and back. GitHub shows the diagram as a plain image. Opened in a browser, [`docs/architecture.svg`](docs/architecture.svg) is interactive: hover a box for what it does and why, and click it for its source or docs.
+The laptop only submits. `scripts/run.sh` uploads `config/`, `pipelines/`, `src/`, and `r/` to S3 (Amazon Simple Storage Service), then starts Nextflow itself as an AWS (Amazon Web Services) Batch job on an on-demand queue, so the laptop can close and a Spot reclaim can't kill the whole run. Nextflow sends every task to a Spot queue that scales from zero to 256 vCPUs (virtual CPUs) and back. GitHub shows the diagram as a plain image. Opened in a browser, [`docs/architecture.svg`](docs/architecture.svg) is interactive: hover a box for what it does and why, and click it for its source or docs.
 
 ### AWS (Amazon Web Services) services
 
@@ -80,6 +80,14 @@ Each run writes to `results/<pipeline>/<run ID>/` in the S3 (Amazon Simple Stora
 - `plots/`: `coverage.png`, `methylation.png`, `pca.png`, and `pca.tsv` with the scores behind the PCA (principal component analysis) plot.
 - `report.html`: everything above as one interactive page.
 
+**The differential methylation outputs:**
+
+- `dml.tsv.gz`: one row per tested CpG (cytosine followed by guanine) site with the test statistic, p-value, FDR (false discovery rate), and mean beta in normal and tumor.
+- `dmrs.tsv`: one row per DMR (differentially methylated region), strongest first: position, length, number of CpG (cytosine followed by guanine) sites, area statistic (the sum of its sites' test statistics), and mean beta in normal and tumor.
+- `dmr_samples.tsv`: mean beta over each DMR's (differentially methylated region's) sites, per sample, for the per-patient plots.
+- `summary.tsv`: sites tested, significant sites, and DMRs (differentially methylated regions), by direction.
+- `plots/`: `volcano.png` and `top_dmrs.png`. `report.html`: an interactive version, with a sortable table of the 500 strongest DMRs (differentially methylated regions).
+
 ## Results
 
 From the 20 million read run. Full numbers per sample are in the [QC (quality control) report](docs/reports/gse95654_20m/qc_report.html).
@@ -102,9 +110,29 @@ From the 20 million read run. Full numbers per sample are in the [QC (quality co
 
 PC1 (principal component 1) explains 41% of the variance and separates 8 of 9 tumors from the normals (top of this page). P42's tumor sits with the normals. Read layout doesn't separate samples, so the single-end and paired-end batch isn't what drives the split.
 
+### Differential methylation
+
+DSS (Dispersion Shrinkage for Sequencing data) models methylated reads out of total reads at each site with a beta-binomial model: a coin flip per read, plus extra sample-to-sample spread (dispersion) that DSS pulls toward the average across sites, which steadies the estimate with only 9 pairs. The model is `~ patient + tissue`, so each tumor is compared with its own patient's normal, and differences between patients, read layout included, drop out. FDR (false discovery rate) correction (Benjamini-Hochberg) keeps the expected share of false calls among the reported sites at 5%. DMRs (differentially methylated regions) are runs of at least 3 nearby FDR (false discovery rate)-significant sites. Full details are in the [DMR (differentially methylated region) report](docs/reports/gse95654_20m/dmr_report.html).
+
+| | Total | Higher in tumor | Lower in tumor |
+|---|---|---|---|
+| CpG (cytosine followed by guanine) sites tested (5+ reads in all 18 samples) | 718,148 | | |
+| Sites at FDR (false discovery rate) < 5% | 168,747 (23.5%) | 45,445 | 123,302 |
+| DMRs (differentially methylated regions) | 10,947 | 2,604 | 8,343 |
+
+![Volcano plot: methylation change against significance for 718,148 CpG sites](docs/images/volcano.png)
+
+*Every tested site. Significant sites change a lot: median 0.30 in beta, and only 2.7% by less than 0.10. Nothing near zero change is called.*
+
+A quarter of sites passing is a lot, so it was checked before being trusted. The p-value histogram is flat to slightly rising above p = 0.5, so the test isn't inflated; that flat part puts about 72% of sites at no real difference, which matches the 23.5% called. 93.1% of DMRs (differentially methylated regions) change in the same direction in at least 8 of 9 patients, and 59.1% in all 9.
+
+![Normal and tumor beta per patient for the 12 strongest DMRs](docs/images/top_dmrs.png)
+
+*The 12 strongest DMRs (differentially methylated regions) all gain methylation in tumor, from 0.21 to 0.63 on average: dense CpG (cytosine followed by guanine) clusters going from mostly unmethylated to mostly methylated. Losses are more common (8,343 of 10,947) but individually weaker. The tumor that gains least is P15 in all 12 panels; its tumor lost the most methylation overall (61.7% to 31.1% of CpG (cytosine followed by guanine) calls). P42 is among the two lowest in 7 panels and follows the DMR (differentially methylated region) direction in 80% of all DMRs, against 94% to 99% for every other patient; its tumor also sat with the normals in the PCA (principal component analysis).*
+
 ### Interactive reports
 
-GitHub shows HTML (web page) files as source, so download them and open them in a browser. The QC (quality control) report loads its charting library from a CDN (content delivery network); the others are self-contained.
+GitHub shows HTML (web page) files as source, so download them and open them in a browser. The QC (quality control) and DMR (differentially methylated region) reports load their charting library from a CDN (content delivery network); the others are self-contained.
 
 | Report | What it shows |
 |---|---|
@@ -112,6 +140,8 @@ GitHub shows HTML (web page) files as source, so download them and open them in 
 | [`multiqc_report.html`](docs/reports/gse95654_20m/multiqc_report.html) | methylseq's MultiQC (combined quality control) report: read quality, trimming, alignment, and methylation per sample |
 | [`methylseq_execution_report.html`](docs/reports/gse95654_20m/methylseq_execution_report.html), [`methylseq_execution_timeline.html`](docs/reports/gse95654_20m/methylseq_execution_timeline.html) | Nextflow's run time, CPU, and memory per task for the resumed methylseq run |
 | [`qc_execution_report.html`](docs/reports/gse95654_20m/qc_execution_report.html), [`qc_execution_timeline.html`](docs/reports/gse95654_20m/qc_execution_timeline.html) | The same for the QC (quality control) run |
+| [`dmr_report.html`](docs/reports/gse95654_20m/dmr_report.html) | The differential methylation report: counts, volcano, sortable table of the 500 strongest DMRs (differentially methylated regions), and each DMR's normal and tumor values per patient |
+| [`dss_execution_report.html`](docs/reports/gse95654_20m/dss_execution_report.html), [`dss_execution_timeline.html`](docs/reports/gse95654_20m/dss_execution_timeline.html) | The same for the DSS (Dispersion Shrinkage for Sequencing data) run |
 
 ## Run it
 
@@ -120,6 +150,7 @@ Requires [uv](https://docs.astral.sh/uv/), the AWS CLI (command-line interface) 
 ```bash
 uv sync
 uv run pytest
+(cd r && Rscript tests/test_dss.R)   # R tests; renv installs DSS into r/renv on first use
 cp .env.example .env   # fill in the AWS section from the stack outputs
 ```
 
@@ -130,9 +161,10 @@ scripts/run.sh fetch_sra config/fetch_sra/gse95654_20m.yaml
 scripts/run.sh methylseq config/methylseq/gse95654_20m.yaml
 scripts/run.sh convert config/convert/gse95654_20m.yaml
 scripts/run.sh qc config/qc/gse95654_20m.yaml
+scripts/run.sh dss config/dss/gse95654_20m.yaml
 ```
 
-The `convert` and `qc` params files name the exact upstream run they read, so after a new methylseq run, point them at its run ID. Add `--resume <session-id>` to pick up a failed run from cache. `scripts/run.sh methylseq config/methylseq/test.yaml` runs methylseq's bundled test data, a quick check that the pins and the stack work. `--compute local` (Docker, container software) and `--compute slurm` are there too, but they aren't the default.
+The `convert`, `qc`, and `dss` params files name the exact upstream run they read, so after a new methylseq run, point them at its run ID. Add `--resume <session-id>` to pick up a failed run from cache. `scripts/run.sh methylseq config/methylseq/test.yaml` runs methylseq's bundled test data, a quick check that the pins and the stack work. `--compute local` (Docker, container software) and `--compute slurm` are there too, but they aren't the default.
 
 `scripts/make_diagrams.py` redraws `docs/architecture.svg`.
 
@@ -143,15 +175,18 @@ The `convert` and `qc` params files name the exact upstream run they read, so af
 - **RRBS (reduced representation bisulfite sequencing) is partial.** It reads CpG (cytosine followed by guanine)-rich regions such as promoters and CpG (cytosine followed by guanine) islands well and most of the genome not at all.
 - **Tissue, not blood.** These are tumor and normal colon. MCED (multi-cancer early detection) tests read cell-free DNA (deoxyribonucleic acid) from blood, where tumor DNA (deoxyribonucleic acid) is a small fraction of the total; methyl-floor models that dilution.
 - **One batch variable.** Read layout is the only batch recorded. Sequencing run and processing date aren't in the metadata.
-- **No differential methylation yet.** DSS (Dispersion Shrinkage for Sequencing data) and DMR (differentially methylated region) calls are Build E.
+- **Only sites covered in every sample are tested.** Requiring 5 reads in all 18 samples keeps 718,148 sites; the single-end patients cover the fewest, so they limit it most.
+- **DMRs (differentially methylated regions) aren't annotated.** They are positions only, with no genes, promoters, or CpG (cytosine followed by guanine) islands attached.
+- **No region-level error rate.** FDR (false discovery rate) controls false calls among sites; a DMR (differentially methylated region) is built from significant sites, but its own false call rate isn't estimated.
 
 ## Layout
 
 ```
 scripts/run.sh        the one command: upload config and submit a run to AWS Batch
 config/               params files per pipeline and dataset, the run manifest, compute profiles
-pipelines/            this repo's Nextflow pipelines: fetch_sra, convert, qc
-src/methyl_flow/      conversion, QC table, plots, and the interactive report
+pipelines/            this repo's Nextflow pipelines: fetch_sra, convert, qc, dss
+src/methyl_flow/      conversion, QC table, plots, and the interactive reports
+r/                    DSS differential methylation (R, its own renv project) and its tests
 tests/                pytest tests on small fixture files, no network by default
 infra/aws/            CDK stack for AWS Batch, S3, and the Nextflow head job
 docs/                 walkthrough, software list, architecture diagram, images, reports

@@ -1,0 +1,10 @@
+# Tumor against matched normal for the GSE95654 20M-read methylseq run, with DSS.
+# Run with: scripts/run.sh dss config/dss/gse95654_20m.yaml
+
+coverage: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/methylseq/methylseq_gse95654_20m_20261022-103858/bismark/methylation_calls/methylation_coverage/*.bismark.cov.gz
+manifest: config/gse95654/runs.tsv
+
+# Test a site only if all 18 samples have at least this many reads there
+min_reads: 5
+fdr: 0.05
+min_cg: 3
