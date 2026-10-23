@@ -1,0 +1,16 @@
+# Fetch GSE95654 (SRA study SRP101332) on AWS at 20,000,000 reads (read pairs for paired-end)
+# per sample. At 5,000,000 (gse95654.yaml) the median CpG site had 2 reads and only 165 sites
+# reached 10 reads in all 18 samples. Every run has at least 29.7 million, so none falls short.
+# Writes to its own data_dir so the 5,000,000-read data behind the first runs stays intact.
+# Run with: scripts/run.sh fetch_sra config/fetch_sra/gse95654_20m.yaml
+
+runs: config/gse95654/runs.tsv
+reads: 20000000
+seed: 42
+
+# GENCODE release 50 GRCh38 primary assembly (no alt haplotypes)
+fasta: https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_50/GRCh38.primary_assembly.genome.fa.gz
+fasta_md5: da1a11258be075cfa7af718162c894e7
+
+# Reads, reference, and the methylseq samplesheet land here; config/methylseq/gse95654_20m.yaml reads them
+data_dir: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/data/gse95654_20m

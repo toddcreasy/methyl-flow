@@ -1,0 +1,15 @@
+# GSE95654 colorectal tumor and adjacent normal, 9 patients, RRBS, downsampled to 20,000,000 reads.
+# Inputs come from: scripts/run.sh fetch_sra config/fetch_sra/gse95654_20m.yaml
+# Run with: scripts/run.sh methylseq config/methylseq/gse95654_20m.yaml
+# Full parameter list: https://nf-co.re/methylseq/4.2.0/parameters
+
+input: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/data/gse95654_20m/samplesheet.csv
+rrbs: true
+
+# Same GENCODE release 50 GRCh38 reference as gse95654.yaml, and the Bismark index that run
+# published, so this run skips the index build.
+fasta: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/data/gse95654/references/GRCh38.primary_assembly.genome.fa.gz
+bismark_index: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/methylseq/methylseq_gse95654_20261014-222956/bismark/reference_genome/BismarkIndex/
+igenomes_ignore: true
+
+multiqc_title: methyl-flow GSE95654 20M

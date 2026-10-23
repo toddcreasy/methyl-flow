@@ -10,15 +10,11 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 **A. methylseq test profile** (3 of 3 done)
 
-**B. Real dataset** (5 of 5 done)
+**B. Real dataset** (6 of 6 done)
 
 **C. Conversion to the beta table** (4 of 4 done)
 
-**D. QC (quality control) summary and plots** (0 of 4 done)
-- ⬜ QC (quality control) table per sample: bisulfite conversion rate, coverage, duplicate rate, generated from pipeline output.
-- ⬜ Coverage and methylation distribution plots.
-- ⬜ PCA (principal component analysis) by group and batch.
-- ⬜ One command regenerates the table and plots from pipeline output.
+**D. QC (quality control) summary and plots** (4 of 4 done)
 
 **E. Differential methylation** (0 of 4 done)
 - ⬜ R (statistics language) environment pinned with renv (R package lockfile tool); code, `renv.lock`, and R library all in `r/`.
@@ -73,14 +69,14 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 - **Dispersion:** extra spread between samples beyond counting noise. DSS (Dispersion Shrinkage for Sequencing data) pulls each site's noisy estimate toward the average across sites.
 - **FDR (false discovery rate):** the expected share of false calls among all calls. Testing thousands of sites makes some look significant by chance; multiple-testing correction controls it.
 
-**Status: 🔴 No.** **Build D, E.**
+**Status: 🟡 Partly.** QC (quality control) summary done (Build D); differential methylation with DSS (Dispersion Shrinkage for Sequencing data) is **Build E.**
 
 ### 1.5 Visualize: coverage and methylation distributions, PCA (principal component analysis) by group and batch, DMR (differentially methylated region) plots
 
 - **PCA (principal component analysis):** projects samples onto the directions of largest variation. If samples cluster by batch rather than group, the batch is driving the signal.
 - **Batch effect:** differences from how samples were processed (run, lab, date) rather than biology.
 
-**Status: 🔴 No.** **Build D, E.**
+**Status: 🟡 Partly.** Coverage and methylation distributions and PCA (principal component analysis) by tissue and batch done (Build D); DMR (differentially methylated region) plots are **Build E.**
 
 ## 2. "What the project must show"
 
@@ -94,7 +90,7 @@ Status: 🟢 **Yes** (done, with evidence), 🟡 **Partly** (some of it), 🔴 *
 
 ### 2.3 A QC (quality control) summary table and the plots, generated from pipeline output, not hand-edited
 
-**Status: 🔴 No.** **Build D.**
+**Status: 🟢 Yes.** `scripts/run.sh qc config/qc/gse95654_20m.yaml` writes the table and plots from methylseq and convert output (Build D).
 
 ### 2.4 An honest limits section: downsampled data, small sample counts, RRBS (reduced representation bisulfite sequencing) covers only CpG-rich (cytosine-guanine-rich) regions
 
@@ -127,6 +123,7 @@ Order follows the brief's order of work.
   - Mapping rate: 62.7% to 70.6%, normal for RRBS (reduced representation bisulfite sequencing). The single-end patients (P32, P42) fall inside the paired-end range.
   - Bisulfite conversion, estimated from CHH (a cytosine followed by two non-guanine bases) methylation: 99.42% to 99.62%, above the usual 99% bar in every sample.
   - Mean CpG (a cytosine followed by a guanine) methylation drops from normal to tumor in P15 (64.2% to 33.3%), P16, P50, and slightly P08; P42 rises; P51, P54, P60 are flat.
+- ✅ Rerun at 20,000,000 reads (read pairs for paired-end) per sample, seed 42, after Build D showed 5M reads left a median of 2 reads per CpG (a cytosine followed by a guanine). `config/fetch_sra/gse95654_20m.yaml` (run `fetch_sra_gse95654_20m_20261022-100516`), `config/methylseq/gse95654_20m.yaml` reusing the 5M run's Bismark index. Run `methylseq_gse95654_20m_20261022-103858`: Spot reclaimed P51_normal's alignment instance three times, ending the run; resumed as `_r20261022-170141`, all 18 samples done.
 
 ### C. Conversion (1.3, 2.2)
 - ✅ Read Bismark coverage files from methylseq output. `src/methyl_flow/convert.py:read_coverage` keeps chr1 to chr22, chrX, chrY and sites with at least 10 reads (`--min-coverage`); beta is methylated over total reads. The two cytosines of a CpG (a cytosine followed by a guanine), one per strand, stay separate rows, since merging them needs the reference sequence.
@@ -136,10 +133,14 @@ Order follows the brief's order of work.
 - ✅ Schema check: the output loads in methyl-floor. `test_output_loads_in_methyl_floor` checks the sample sheet columns against `methyl_floor.load.SAMPLE_FIELDS` and reads the beta table with `methyl_floor.probes.iter_betas`. CI (continuous integration) skips it because methyl-floor is a separate private repo; run it with `uv run --with ../methyl-floor pytest`.
 
 ### D. QC (quality control) summary and plots (1.4, 1.5, 2.3)
-- ⬜ QC (quality control) table per sample: bisulfite conversion rate, coverage, duplicate rate.
-- ⬜ Coverage and methylation distribution plots.
-- ⬜ PCA (principal component analysis) by group and batch.
-- ⬜ One command regenerates the table and plots from pipeline output.
+- ✅ QC (quality control) table per sample: bisulfite conversion rate, coverage, duplicate rate. `src/methyl_flow/qc.py` writes `samples_qc.tsv`: conversion rate from Bismark splitting reports (CHG and CHH contexts), duplicate rate from FastQC (read-weighted over read 1 and read 2), coverage stats from the coverage files. Run `qc_gse95654_20m_20261022-195947` on the 20M data (convert run `convert_gse95654_20m_20261022-195041`):
+  - Conversion 99.33% to 99.56%, above the 99% bar everywhere; unchanged from 5M, as expected for the same libraries.
+  - Median coverage 4 to 7 reads per CpG (a cytosine followed by a guanine), up from 2 at 5M. Sites at 10 or more reads: 18.5% to 33.0% per sample (1.2M to 2.7M sites), up from 0.4% to 3.5%.
+  - Duplicate rate 64% to 75%, up from 46% to 57% at 5M. Expected: RRBS (reduced representation bisulfite sequencing) reads start at MspI cut sites, and deeper sampling of the same libraries re-reads the same fragments.
+  - Single-end patients (P32, P42) cover fewer cytosines (5.7M to 6.4M against 7.2M to 9.2M paired-end).
+- ✅ Coverage and methylation distribution plots. `src/methyl_flow/plots.py`: `coverage.png`, `methylation.png`. Beta values are bimodal near 0 and 1 in every sample, as expected at CpG (a cytosine followed by a guanine) sites. P15 and P16 tumor have a larger share of single-read sites (27% to 30%) than the rest.
+- ✅ PCA (principal component analysis) by group and batch. `pca.png` and `pca.tsv` on the 121,264 CpG (a cytosine followed by a guanine) sites covered in every sample (165 at 5M). PC1 (principal component 1), 41% of variance, separates 8 of 9 tumors from the normals; P42 tumor sits with the normals at both depths. Read layout does not separate samples on PC1 or PC2 (principal component 2).
+- ✅ One command regenerates the table and plots from pipeline output. `scripts/run.sh qc config/qc/gse95654_20m.yaml`, pipeline `pipelines/qc`; `tower.yml` lists the outputs as Seqera Platform reports.
 
 ### E. Differential methylation (1.4, 1.5)
 - ⬜ R (statistics language) environment pinned with renv (R package lockfile tool); code, `renv.lock`, and R library all in `r/`.

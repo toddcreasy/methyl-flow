@@ -1,0 +1,13 @@
+# QC summary and plots for the GSE95654 20M-read methylseq run and its converted beta table.
+# Run with: scripts/run.sh qc config/qc/gse95654_20m.yaml
+
+samples: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/convert/convert_gse95654_20m_20261022-195041/samples.tsv
+betas: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/convert/convert_gse95654_20m_20261022-195041/betas/GSE95654.parquet
+splitting_reports: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/methylseq/methylseq_gse95654_20m_20261022-103858/bismark/methylation_calls/splitting_report/*_splitting_report.txt
+coverage: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/methylseq/methylseq_gse95654_20m_20261022-103858/bismark/methylation_calls/methylation_coverage/*.bismark.cov.gz
+fastqc: s3://methylflowbatchstack-bucket83908e77-cu41wphwya89/results/methylseq/methylseq_gse95654_20m_20261022-103858/multiqc/bismark/methyl-flow-GSE95654-20M_multiqc_report_data/multiqc_fastqc.txt
+
+# Same cutoff as config/convert/gse95654_20m.yaml; the coverage plot marks it
+min_coverage: 10
+# Coverage histogram groups every site with this many reads or more into one bin
+max_bin: 100
