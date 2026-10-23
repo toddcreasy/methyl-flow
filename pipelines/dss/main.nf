@@ -12,10 +12,13 @@
  *   annotation_enrichment.tsv  CpG island and gene context of tested, significant, and DMR sites
  *   plots/              volcano.png, top_dmrs.png, annotation.png
  *   report.html         interactive version of the above
+ *   igv/igv_report.html genome browser view (IGV, Integrative Genomics Viewer) of the strongest
+ *                       DMRs, with normal and tumor methylation, DMR, CpG island, and gene tracks
  *
  * The statistics are r/dss.R (tested in r/tests/test_dss.R); the annotation is
  * src/methyl_flow/annotate.py (tests/test_annotate.py); the plots and report are
- * src/methyl_flow/dmr_report.py (tests/test_dmr_report.py).
+ * src/methyl_flow/dmr_report.py (tests/test_dmr_report.py); the IGV tracks are
+ * src/methyl_flow/igv_tracks.py (tests/test_igv_tracks.py), rendered by igv-reports.
  */
 
 params.coverage  = null   // glob of Bismark .cov.gz files from a methylseq run
@@ -27,6 +30,9 @@ params.gtf             = null   // GENCODE GTF URL or path, gzipped
 params.gtf_md5         = null
 params.cpg_islands     = null   // UCSC cpgIslandExt.txt.gz URL or path
 params.cpg_islands_content_md5 = null   // MD5 after gunzip
+params.igv_per_direction = 25   // strongest DMRs shown in each direction
+params.igv_flank         = 2000 // bases loaded either side of each DMR
+params.igv_twobit        = 'https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit'
 params.outdir    = null   // set by scripts/run.sh
 
 process DSS_TEST {
@@ -77,6 +83,54 @@ process ANNOTATE {
     """
 }
 
+process IGV_TRACKS {
+    input:
+    path src
+    path dml, stageAs: 'dss/*'
+    path annotation, stageAs: 'dss/*'
+    path gtf
+    path cpg_islands
+
+    output:
+    path 'tracks/*'
+
+    script:
+    """
+    PYTHONPATH=${src} python -m methyl_flow.igv_tracks \\
+        --dss dss \\
+        --gtf ${gtf} \\
+        --cpg-islands ${cpg_islands} \\
+        --per-direction ${params.igv_per_direction} \\
+        --flank ${params.igv_flank} \\
+        --out tracks
+    """
+}
+
+process IGV_REPORT {
+    publishDir "${params.outdir}/igv", mode: 'copy'
+
+    input:
+    path tracks
+
+    output:
+    path 'igv_report.html'
+
+    script:
+    """
+    create_report sites.tsv \\
+        --sequence 1 --begin 2 --end 3 \\
+        --twobit ${params.igv_twobit} \\
+        --track-config tracks.json \\
+        --flanking ${params.igv_flank} \\
+        --info-columns dmr_id direction nearest_gene tss_distance cpg_context n_cpg beta_normal beta_tumor diff \\
+        --title '${workflow.runName}: strongest DMRs' \\
+        --output igv_report.html
+    # igv-reports' default template labels the table "Variants"
+    sed -i 's|class="lbl-toggle">Variants<|class="lbl-toggle">DMRs (differentially methylated regions)<|' igv_report.html
+    grep -q 'lbl-toggle">DMRs' igv_report.html
+    """
+}
+
 process DSS_REPORT {
     publishDir params.outdir, mode: 'copy'
 
@@ -115,4 +169,12 @@ workflow {
         file(params.cpg_islands, checkIfExists: true),
     )
     DSS_REPORT(src, DSS_TEST.out.tables, DSS_TEST.out.dml, ANNOTATE.out)
+    IGV_TRACKS(
+        src,
+        DSS_TEST.out.dml,
+        ANNOTATE.out,
+        file(params.gtf, checkIfExists: true),
+        file(params.cpg_islands, checkIfExists: true),
+    )
+    IGV_REPORT(IGV_TRACKS.out)
 }

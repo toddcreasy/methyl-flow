@@ -453,7 +453,8 @@ s += [
         "more reads in every sample, pairs each tumor with its own patient's normal, and calls "
         "DMRs (differentially methylated regions) from FDR (false discovery rate)-significant "
         "sites. src/methyl_flow/annotate.py then places each DMR against CpG islands, "
-        "promoters, and the nearest protein-coding gene.",
+        "promoters, and the nearest protein-coding gene, and igv-reports draws a genome "
+        "browser (IGV, Integrative Genomics Viewer) view of the strongest DMRs.",
         REPO + "r/dss.R",
     ),
     node(
@@ -463,7 +464,7 @@ s += [
         NH,
         "data",
         "DMR report",
-        "report.html, dmrs.tsv",
+        "report.html, IGV view",
         "DMRs (differentially methylated regions) built from FDR (false discovery rate)-"
         "significant sites, annotated with CpG island context and nearest gene, plus a volcano "
         "plot, enrichment against all tested sites, and each DMR's normal and tumor values per "

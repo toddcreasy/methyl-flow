@@ -89,6 +89,7 @@ Each run writes to `results/<pipeline>/<run ID>/` in the S3 (Amazon Simple Stora
 - `annotation_enrichment.tsv`: the share of tested, significant, and DMR (differentially methylated region) sites in each CpG (cytosine followed by guanine) island and gene context, with fold change against all tested sites.
 - `summary.tsv`: sites tested, significant sites, and DMRs (differentially methylated regions), by direction.
 - `plots/`: `volcano.png`, `top_dmrs.png`, and `annotation.png`. `report.html`: an interactive version, with a sortable table of the 500 strongest DMRs (differentially methylated regions) and their nearest genes.
+- `igv/igv_report.html`: a genome browser view (IGV, Integrative Genomics Viewer) of the 25 strongest DMRs (differentially methylated regions) in each direction, with tracks for mean normal and tumor methylation at each tested site, the DMRs, CpG (cytosine followed by guanine) islands, and genes. Built with igv-reports; it embeds only the data within 2,000 bases of each region.
 
 ## Results
 
@@ -148,7 +149,7 @@ Each DMR (differentially methylated region) was placed against GENCODE release 5
 
 ### Interactive reports
 
-GitHub shows HTML (web page) files as source, so download them and open them in a browser. The QC (quality control) and DMR (differentially methylated region) reports load their charting library from a CDN (content delivery network); the others are self-contained.
+GitHub shows HTML (web page) files as source, so download them and open them in a browser. The QC (quality control), DMR (differentially methylated region), and IGV (Integrative Genomics Viewer) reports load their libraries, and the IGV report its genome sequence, over the network; the others are self-contained.
 
 | Report | What it shows |
 |---|---|
@@ -157,6 +158,7 @@ GitHub shows HTML (web page) files as source, so download them and open them in 
 | [`methylseq_execution_report.html`](docs/reports/gse95654_20m/methylseq_execution_report.html), [`methylseq_execution_timeline.html`](docs/reports/gse95654_20m/methylseq_execution_timeline.html) | Nextflow's run time, CPU, and memory per task for the resumed methylseq run |
 | [`qc_execution_report.html`](docs/reports/gse95654_20m/qc_execution_report.html), [`qc_execution_timeline.html`](docs/reports/gse95654_20m/qc_execution_timeline.html) | The same for the QC (quality control) run |
 | [`dmr_report.html`](docs/reports/gse95654_20m/dmr_report.html) | The differential methylation report: counts, volcano, where the DMRs (differentially methylated regions) fall relative to CpG (cytosine followed by guanine) islands and genes, a sortable table of the 500 strongest DMRs with their nearest genes, and each DMR's normal and tumor values per patient |
+| [`igv_report.html`](docs/reports/gse95654_20m/igv_report.html) | Genome browser (IGV, Integrative Genomics Viewer) view of the 25 strongest DMRs (differentially methylated regions) in each direction: pick a region from the table, then zoom out to see 2,000 bases either side |
 | [`dss_execution_report.html`](docs/reports/gse95654_20m/dss_execution_report.html), [`dss_execution_timeline.html`](docs/reports/gse95654_20m/dss_execution_timeline.html) | The same for the DSS (Dispersion Shrinkage for Sequencing data) run |
 
 ## Run it
