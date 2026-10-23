@@ -10,6 +10,8 @@ Turn raw bisulfite sequencing reads into a methylation beta table, a QC (quality
 scripts/run.sh methylseq config/methylseq/gse95654_20m.yaml
 ```
 
+**[Live results](https://d1m4tbm3vqx6m6.cloudfront.net)**: one page that walks through each step, with figures and links to every interactive report.
+
 [docs/walkthrough.md](docs/walkthrough.md) goes stage by stage: what each step does, the numbers it produced, and what went wrong. [docs/software.md](docs/software.md) lists every tool, what it does, and why it was picked over the alternatives.
 
 A research project on public data. Not for clinical or diagnostic use.
@@ -150,7 +152,7 @@ Each DMR (differentially methylated region) was placed against GENCODE release 5
 
 ### Interactive reports
 
-GitHub shows HTML (web page) files as source, so download them and open them in a browser. The QC (quality control), DMR (differentially methylated region), and IGV (Integrative Genomics Viewer) reports load their libraries, and the IGV report its genome sequence, over the network; the others are self-contained.
+All of these are on the [results site](https://d1m4tbm3vqx6m6.cloudfront.net); the links below are the copies in this repo, which GitHub shows as source, so open those after downloading. The QC (quality control), DMR (differentially methylated region), and IGV (Integrative Genomics Viewer) reports load their libraries, and the IGV report its genome sequence, over the network; the others are self-contained.
 
 | Report | What it shows |
 |---|---|
