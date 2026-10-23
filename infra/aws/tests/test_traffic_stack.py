@@ -18,7 +18,11 @@ def test_requires_an_email() -> None:
 def test_daily_schedule_invokes_the_function(template: Template) -> None:
     template.has_resource_properties(
         "AWS::Scheduler::Schedule",
-        {"ScheduleExpression": "cron(0 12 * * ? *)", "State": "ENABLED"},
+        {
+            "ScheduleExpression": "cron(0 7 * * ? *)",
+            "ScheduleExpressionTimezone": "America/New_York",
+            "State": "ENABLED",
+        },
     )
     template.has_resource_properties(
         "AWS::Lambda::Function",

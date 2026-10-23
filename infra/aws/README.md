@@ -114,8 +114,8 @@ Outputs: `SiteUrl`, `SiteBucketName`, `DistributionId`. The publish script reads
 ## Repo traffic
 
 GitHub keeps repo views and clones for 14 days. `MethylFlowTrafficStack` (`stacks/traffic_stack.py`,
-ported from glia-nav) runs the `methyl-flow-github-traffic` Lambda at 12:00 UTC (Coordinated
-Universal Time). It writes the raw API response to `snapshots/<date>.json` in the
+ported from glia-nav) runs the `methyl-flow-github-traffic` Lambda at 7:00 a.m. America/New_York,
+which follows daylight saving time. It writes the raw API response to `snapshots/<date>.json` in the
 `TrafficBucketName` bucket, merges the daily counts into `history.json` there, and emails a summary
 through the `methyl-flow-traffic` SNS (Simple Notification Service) topic to `traffic_email`. A
 failed run alarms through the same topic (`methyl-flow-github-traffic-errors`).
