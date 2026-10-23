@@ -33,13 +33,19 @@ methylseq skips deduplication when `rrbs: true`. RRBS (reduced representation bi
 | matplotlib 3.11.2 | Plotting library | Static PNG (image) plots: coverage, methylation, PCA (principal component analysis) | Renders headless inside a container; PNGs drop straight into the README | |
 | Plotly.js 2.35.2 | JavaScript charting library | The charts in `report.html`, loaded from a pinned CDN (content delivery network) URL | Hover and zoom with no Python dependency, so the QC (quality control) container stays the same | **Plotly for Python:** would mean rebuilding the pinned container. **Embedding Plotly.js:** adds 3.5 MB to every report |
 
-## Planned: differential methylation (Build E)
+## Differential methylation
 
-| Tool | What it is | Why this one | Passed over, and why |
-|---|---|---|---|
-| R and Bioconductor | Statistics language and its bioinformatics package repository | Where the established differential methylation methods live | |
-| DSS (Dispersion Shrinkage for Sequencing data) | Differential methylation package | Models read counts per CpG (cytosine followed by guanine) site with a beta-binomial model and shrinks each site's dispersion estimate toward the average, which holds up at small sample counts | **methylKit:** its defaults are less stable with 9 samples per group |
-| renv | R package lockfile tool | The R counterpart to `uv.lock`; everything lives in `r/` | |
+| Tool | What it is | What it does here | Why this one | Passed over, and why |
+|---|---|---|---|---|
+| R 4.5.2 | Statistics language | `r/dss.R`: reads coverage files, fits the model, calls DMRs (differentially methylated regions) | Where the established differential methylation methods live | |
+| DSS (Dispersion Shrinkage for Sequencing data) 2.58.0 | Bioconductor differential methylation package | Fits a beta-binomial model to methylated and total reads at each CpG (cytosine followed by guanine) site with `~ patient + tissue`, tests the tissue term, and joins FDR (false discovery rate)-significant sites into DMRs (differentially methylated regions) | Shrinks each site's dispersion estimate toward the average across sites, which holds up with 9 pairs. Its multifactor model handles the paired design | **methylKit:** its defaults are less stable at small sample counts. **DSS's two-group test:** allows smoothing across neighboring sites, but can't pair each tumor with its own normal |
+| data.table 1.17.8 | R table library | Reads and joins the coverage files, writes the results | Fast enough for 18 files of about 9 million rows each; already a DSS dependency | |
+| BioContainers `bioconductor-dss:2.58.0` | Container image built from Bioconda | Runs `DSS_TEST` on AWS (Amazon Web Services) Batch and the R tests in CI (continuous integration) | A pinned, ready-made image for this exact package | **A custom image:** nothing to add |
+| renv | R package lockfile tool | `r/renv.lock` pins DSS and data.table for local work, the R counterpart to `uv.lock` | Keeps everything R-specific in `r/` | |
+
+The laptop runs R 4.6.1, where Bioconductor 3.23 installs DSS 2.60.0; the container has DSS 2.58.0 on R 4.5.2. The container is the version of record for every real run, and `r/tests/test_dss.R` passes in both. The R tests use base R only, so they run in the pinned image with nothing installed on top.
+
+The DMR (differentially methylated region) plots and report come from `src/methyl_flow/dmr_report.py`, in the same Python container as the QC (quality control) report. R does the statistics; Python does the presentation, and they hand off through files.
 
 ## Development
 

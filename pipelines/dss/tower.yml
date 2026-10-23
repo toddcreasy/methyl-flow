@@ -1,0 +1,10 @@
+# Files Seqera Platform lists on a run's Outputs tab, matched against published files.
+reports:
+  report.html:
+    display: "Interactive DMR report: summary, volcano, DMR table, per-patient view"
+  summary.tsv:
+    display: "Sites tested, significant sites, and DMRs"
+  dmrs.tsv:
+    display: "DMRs, strongest first"
+  "plots/*.png":
+    display: "DMR plots"

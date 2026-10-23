@@ -19,7 +19,6 @@ STYLE = {
     "data": ("#E7F3EC", "#2F8F5B", ""),
     "ops": ("#EEF1F5", "#6B7A8C", ""),
     "outside": ("#FFFFFF", "#8A8F98", ' stroke-dasharray="6 4"'),
-    "planned": ("#F7F7F7", "#B0B8C1", ' stroke-dasharray="2 3"'),
 }
 REPO = "https://github.com/toddcreasy/methyl-flow/blob/main/"
 WALK = REPO + "docs/walkthrough.md"
@@ -99,7 +98,7 @@ s = header(
 )
 s.append('<text x="40" y="26" class="t" font-size="15" font-weight="700">methyl-flow</text>')
 s.append(
-    '<text x="140" y="26" class="s">Dashed boxes are outside AWS; dotted boxes are planned. '
+    '<text x="140" y="26" class="s">Dashed boxes are outside AWS. '
     "Open the SVG on its own and hover a box for what it does and why.</text>"
 )
 
@@ -444,24 +443,28 @@ s += [
         RC,
         DW,
         NH,
-        "planned",
-        "DSS (planned)",
-        "R, tumor versus normal",
-        "Build E: DSS (Dispersion Shrinkage for Sequencing data) tests each CpG (cytosine "
-        "followed by guanine) site between groups with a beta-binomial model, then calls DMRs "
-        "(differentially methylated regions).",
-        "https://bioconductor.org/packages/DSS/",
+        "analysis",
+        "dss",
+        "r/dss.R, ~ patient + tissue",
+        "DSS (Dispersion Shrinkage for Sequencing data) in R fits a beta-binomial model to "
+        "methylated and total reads at each CpG (cytosine followed by guanine) site with 5 or "
+        "more reads in every sample, pairs each tumor with its own patient's normal, and calls "
+        "DMRs (differentially methylated regions) from FDR (false discovery rate)-significant "
+        "sites.",
+        REPO + "r/dss.R",
     ),
     node(
         C[4],
         RC,
         DW,
         NH,
-        "planned",
-        "DMRs (planned)",
-        "regions surviving FDR",
-        "DMRs (differentially methylated regions) that survive FDR (false discovery rate) "
-        "correction, with region plots.",
+        "data",
+        "DMR report",
+        "report.html, dmrs.tsv",
+        "DMRs (differentially methylated regions) built from FDR (false discovery rate)-"
+        "significant sites, a volcano plot, and each DMR's normal and tumor values per patient, "
+        "as an interactive page and tables.",
+        REPO + "docs/reports",
     ),
     arrow([(C[0] + DW, ma), (C[1], ma)], "reads", C[0] + DW + 6, ma - 6),
     arrow([(C[0] + DW, mb), (C[0] + DW + 20, mb), (C[0] + DW + 20, ma + 12), (C[1], ma + 12)]),
@@ -529,11 +532,12 @@ s += [
         DW,
         NH,
         "ops",
-        "pytest",
+        "pytest + R tests",
         "fixture files, no network",
-        "Conversion, QC math, plots, and the report checked on small fixture coverage files, "
-        "splitting reports, and FastQC tables. The methyl-floor schema check runs when that "
-        "repo is installed.",
+        "pytest checks conversion, QC (quality control) math, plots, and both reports on small "
+        "fixture files; the methyl-floor schema check runs when that repo is installed. "
+        "r/tests/test_dss.R plants a known DMR in synthetic data and runs in the same DSS "
+        "container as AWS Batch.",
         REPO + "tests",
     ),
     arrow([(C[0] + DW, mq), (C[1], mq)]),
@@ -551,7 +555,6 @@ for i, (kind, name, sub) in enumerate(
         ("compute", "Compute", "AWS Batch"),
         ("ops", "Operations", "deploy, config, checks"),
         ("outside", "Outside AWS", "external service"),
-        ("planned", "Planned", "not built yet"),
     ]
 ):
     s.append(node(60 + i * 190, LY + 50, 176, NH, kind, name, sub, f"{name}: {sub}"))
