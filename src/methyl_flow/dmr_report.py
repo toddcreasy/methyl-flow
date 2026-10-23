@@ -6,8 +6,9 @@ Reads ``dml.tsv.gz`` (one row per tested CpG site), ``dmrs.tsv``, ``dmr_samples.
   plots/top_dmrs.png    normal and tumor beta per patient for the strongest DMRs
   report.html           summary, volcano, sortable DMR table, and a per-DMR patient view
 
-The report embeds every FDR-significant site plus a random sample of the rest, so it stays a few
-MB however many sites were tested. Plotly.js loads from the same pinned URL as ``report.py``.
+The report embeds a random sample of at most VOLCANO_POINTS sites from each volcano group (higher
+in tumor, lower in tumor, not significant), so it stays small however many sites were tested;
+volcano.png plots every site. Plotly.js loads from the same pinned URL as ``report.py``.
 """
 
 import argparse
@@ -32,7 +33,7 @@ log = logging.getLogger(__name__)
 
 HYPER, HYPO, NOT_SIG = "#eb6834", "#2a78d6", "#b8b6b0"
 # Volcano points embedded in the report besides the significant ones
-BACKGROUND_POINTS = 10_000
+VOLCANO_POINTS = 8_000
 TABLE_ROWS = 500
 TOP_DMRS = 12
 
@@ -292,14 +293,19 @@ def write_report(path, title, summary, dml, dmrs, by_dmr, seed=0):
             for i in index
         ]
 
-    background = np.flatnonzero(~significant)
     rng = np.random.default_rng(seed)
-    shown = rng.choice(background, min(BACKGROUND_POINTS, len(background)), replace=False)
-    sig_hyper = points(np.flatnonzero(significant & (dml["stat"] > 0)))
-    sig_hypo = points(np.flatnonzero(significant & (dml["stat"] < 0)))
+    groups = {
+        "sig_hyper": np.flatnonzero(significant & (dml["stat"] > 0)),
+        "sig_hypo": np.flatnonzero(significant & (dml["stat"] < 0)),
+        "background": np.flatnonzero(~significant),
+    }
+    shown = {
+        k: np.sort(rng.choice(v, min(VOLCANO_POINTS, len(v)), replace=False))
+        for k, v in groups.items()
+    }
     table = dmrs[:TABLE_ROWS]
     data = {
-        "volcano": {"sig_hyper": sig_hyper, "sig_hypo": sig_hypo, "background": points(shown)},
+        "volcano": {k: points(v) for k, v in shown.items()},
         "dmrs": [
             {
                 "dmr_id": d["dmr_id"],
@@ -356,8 +362,16 @@ def write_report(path, title, summary, dml, dmrs, by_dmr, seed=0):
         fdr=f"{fdr:g}",
         fdr_pct=f"{fdr:.0%}",
         volcano_note=html.escape(
-            f"All {len(sig_hyper) + len(sig_hypo):,} significant sites are shown, plus a random "
-            f"{len(shown):,} of the {len(background):,} others."
+            "To keep the page light, it shows a random "
+            + ", ".join(
+                f"{len(shown[k]):,} of {len(groups[k]):,} {label}"
+                for k, label in [
+                    ("sig_hyper", "sites higher in tumor"),
+                    ("sig_hypo", "lower in tumor"),
+                    ("background", "not significant"),
+                ]
+            )
+            + ". volcano.png plots every site."
         ),
         min_cg=count["min_cg"],
         table_note=html.escape(
