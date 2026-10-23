@@ -6,6 +6,8 @@ Writes to ``<out>``:
   pca.png            PC1 and PC2 of the beta table, colored by tissue and by batch
   pca.tsv            the PC1 and PC2 scores behind pca.png
 
+With ``--report``, also writes an interactive HTML version of all three (``report.py``).
+
 PCA uses only sites with a beta in every sample, centered per site and not scaled.
 """
 
@@ -20,6 +22,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pyarrow.parquet as pq  # noqa: E402
+
+from methyl_flow.report import write_report  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -160,6 +164,8 @@ def main() -> None:
     parser.add_argument("--min-coverage", type=int, default=10)
     parser.add_argument("--max-bin", type=int, default=100)
     parser.add_argument("--out", type=Path, default=Path("."))
+    parser.add_argument("--report", type=Path, help="also write an interactive HTML report here")
+    parser.add_argument("--title", default="methyl-flow", help="report title, e.g. the run name")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -185,6 +191,21 @@ def main() -> None:
         writer.writerow(["sample_id", "sample", "tissue", "batch", "pc1", "pc2"])
         for s, (x, y) in zip(samples, scores, strict=True):
             writer.writerow([s["sample_id"], s["sample"], s["tissue"], s["batch"], x, y])
+    if args.report:
+        write_report(
+            args.report,
+            args.title,
+            samples,
+            hist,
+            matrix,
+            scores,
+            explained,
+            n_sites,
+            args.min_coverage,
+            args.max_bin,
+            {"tissue": TISSUE_COLORS, "batch": BATCH_COLORS},
+            BATCH_MARKERS,
+        )
 
 
 if __name__ == "__main__":
