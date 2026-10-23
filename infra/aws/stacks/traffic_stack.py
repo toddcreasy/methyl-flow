@@ -9,7 +9,7 @@ replaces it with a fine-grained PAT.
 
 import pathlib
 
-from aws_cdk import CfnOutput, Duration, RemovalPolicy, Stack
+from aws_cdk import CfnOutput, Duration, RemovalPolicy, Stack, TimeZone
 from aws_cdk import aws_cloudwatch as cw
 from aws_cdk import aws_cloudwatch_actions as cw_actions
 from aws_cdk import aws_iam as iam
@@ -95,13 +95,15 @@ class TrafficStack(Stack):
         )
         token.grant_read(function)
         topic.grant_publish(function)
-        # 12:00 UTC is 8 a.m. Eastern in summer and 7 a.m. in winter.
+        # 7 a.m. Eastern all year: the schedule follows daylight saving time.
         scheduler.Schedule(
             self,
             "TrafficDaily",
             schedule_name="methyl-flow-github-traffic-daily",
             description="Snapshot the methyl-flow GitHub repo traffic once a day.",
-            schedule=scheduler.ScheduleExpression.cron(minute="0", hour="12"),
+            schedule=scheduler.ScheduleExpression.cron(
+                minute="0", hour="7", time_zone=TimeZone.AMERICA_NEW_YORK
+            ),
             target=targets.LambdaInvoke(function, retry_attempts=0),
         )
         # methyl-flow's budget emails directly rather than through a topic, so a failed run
