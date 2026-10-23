@@ -97,6 +97,20 @@ they scale to no running instances between jobs. Compute is billed only while jo
 on-demand rates. The `work/` prefix expires after 30 days; anything under `results/` stays until
 deleted. Tags let Cost Explorer show this stack's spend under `project=methyl-flow`.
 
+## Results site
+
+`MethylFlowSiteStack` (`stacks/site_stack.py`) is separate from the Batch stack so the data bucket
+stays private. It has one bucket with all public access blocked, read only by CloudFront through
+Origin Access Control, HTTPS (secure HTTP) only, security headers, and the cheapest price class
+(North America and Europe edges). `scripts/publish_site.sh` fills it; the bucket is emptied and
+deleted with the stack, since its contents are rebuilt on every publish.
+
+```bash
+cdk deploy MethylFlowSiteStack
+```
+
+Outputs: `SiteUrl`, `SiteBucketName`, `DistributionId`. The publish script reads them itself.
+
 ## Teardown
 
 ```bash

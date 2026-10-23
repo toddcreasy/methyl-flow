@@ -1,0 +1,14 @@
+metric	value
+samples	18
+patients	9
+min_reads	5
+min_cg	3
+sites_tested	718148
+fdr	0.05
+p_threshold	0.0117479860099298
+sites_significant	168747
+sites_hyper	45445
+sites_hypo	123302
+dmrs	10947
+dmrs_hyper	2604
+dmrs_hypo	8343
