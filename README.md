@@ -60,6 +60,7 @@ All defined in one CDK (Cloud Development Kit) app, `infra/aws/` ([its README](i
 | **Secrets Manager** | The Seqera Platform token | Only the head job's role can read it; it never sits in a file. |
 | **CloudWatch Logs** | Console output of every job | For failures that happen before Nextflow writes its own log. |
 | **AWS Budgets** | $50 a month, filtered to the `project=methyl-flow` tag | Email at 80% and 100% of spend. |
+| **Lambda + EventBridge Scheduler** | Daily snapshot of this repo's GitHub traffic to S3, with an email summary (`MethylFlowTrafficStack`) | GitHub keeps traffic for only 14 days; a scheduled function costs nothing between runs. |
 | **CloudFront** | Serves the results site from a private bucket (`MethylFlowSiteStack`) | HTTPS (secure HTTP), cached at the edge, and the bucket itself never accepts public requests. |
 | **CloudFormation / CDK (Cloud Development Kit)** | Every resource above | One Python app with tests, deployed with one command. |
 
