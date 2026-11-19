@@ -151,6 +151,20 @@ def test_outputs_present(template: Template) -> None:
         assert name in outputs
 
 
+def test_env_snippet_sets_what_run_sh_requires(template: Template) -> None:
+    snippet = json.dumps(template.to_json()["Outputs"]["EnvSnippet"])
+    for name in (
+        "BATCH_QUEUE",
+        "AWS_HEAD_QUEUE",
+        "AWS_HEAD_JOB_DEFINITION",
+        "AWS_S3_WORKDIR",
+        "AWS_S3_OUTDIR",
+        "AWS_S3_RUNDIR",
+    ):
+        assert f"{name}=" in snippet
+    assert "AWS_BATCH_QUEUE" not in snippet
+
+
 def test_existing_bucket_is_imported_and_granted() -> None:
     app = cdk.App(context={"bucket_name": "my-existing-bucket"})
     template = Template.from_stack(BatchStack(app, "ImportBucketStack"))

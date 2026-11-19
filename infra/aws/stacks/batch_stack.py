@@ -415,9 +415,13 @@ class BatchStack(Stack):
             "EnvSnippet",
             value=(
                 f"AWS_REGION={self.region} "
-                f"AWS_BATCH_QUEUE={spot_queue.job_queue_name} "
+                # Not AWS_BATCH_*: Batch drops that prefix from a head job's environment
+                f"BATCH_QUEUE={spot_queue.job_queue_name} "
+                f"AWS_HEAD_QUEUE={ondemand_queue.job_queue_name} "
+                f"AWS_HEAD_JOB_DEFINITION={head_job.job_definition_name} "
                 f"AWS_S3_WORKDIR={work_dir} "
-                f"AWS_S3_OUTDIR={out_dir}"
+                f"AWS_S3_OUTDIR={out_dir} "
+                f"AWS_S3_RUNDIR=s3://{bucket.bucket_name}/runs"
             ),
         )
 
