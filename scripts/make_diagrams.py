@@ -86,7 +86,7 @@ def arrow(points, label="", lx=None, ly=None, anchor="start"):
     return out + "</g>"
 
 
-W, H = 1240, 1010
+W, H = 1240, 1110
 NW, NH = 220, 56
 s = header(
     W,
@@ -104,16 +104,16 @@ s.append(
 
 # Laptop and AWS.
 LX, AX = [70], [390, 680, 970]
-R = [80, 180, 280]
+R = [80, 180, 280, 380]
 mid = [r + NH // 2 for r in R]
 s.append(
     panel(
         40,
         40,
         280,
-        320,
+        420,
         "Laptop",
-        "Submits runs and deploys the stack. No sequencing data or processing lives here.",
+        "Submits runs and applies the infrastructure. No sequencing data or processing lives here.",
     )
 )
 s.append(
@@ -121,10 +121,10 @@ s.append(
         360,
         40,
         840,
-        320,
+        420,
         "AWS (Amazon Web Services), us-east-1",
-        "One stack, MethylFlowBatchStack, deployed with the CDK (Cloud Development Kit). "
-        "Billed only while jobs run, plus S3 storage.",
+        "The Batch stack is the CDK (Cloud Development Kit), the results site is Terraform. "
+        "Billed only while jobs run, plus S3 storage and pennies for the site.",
     )
 )
 s += [
@@ -265,6 +265,56 @@ s += [
         "can write its own log.",
         "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/WhatIsCloudWatchLogs.html",
     ),
+    node(
+        LX[0],
+        R[3],
+        NW,
+        NH,
+        "ops",
+        "terraform apply",
+        "infra/terraform/site",
+        "Terraform describes the results site: bucket, CloudFront distribution, and the "
+        "read-only role GitHub Actions uses to plan. Moved from the CDK (Cloud Development Kit) "
+        "by import, so the site kept its address. Applies run from the laptop only.",
+        REPO + "infra/terraform/site/README.md",
+    ),
+    node(
+        AX[0],
+        R[3],
+        NW,
+        NH,
+        "data",
+        "Terraform state",
+        "S3, versioned, lockfile",
+        "Maps each resource in the Terraform code to its real AWS ID. Kept in a versioned S3 "
+        "(Amazon Simple Storage Service) bucket with lockfile locking, so the laptop and CI "
+        "(continuous integration) share one copy and two runs can't write at once.",
+        REPO + "infra/terraform/site/README.md#state",
+    ),
+    node(
+        AX[1],
+        R[3],
+        NW,
+        NH,
+        "data",
+        "Site bucket",
+        "private, public access blocked",
+        "The results hub, reports, figures, and this diagram. scripts/publish_site.sh fills it. "
+        "Every public request is blocked; only the CloudFront distribution can read it.",
+        REPO + "infra/terraform/site/main.tf",
+    ),
+    node(
+        AX[2],
+        R[3],
+        NW,
+        NH,
+        "ops",
+        "CloudFront",
+        "results site, HTTPS only",
+        "Serves the site over HTTPS (secure HTTP) with security headers, cached at North America "
+        "and Europe edges. Reads the bucket through Origin Access Control.",
+        "https://d1m4tbm3vqx6m6.cloudfront.net",
+    ),
 ]
 s += [
     arrow([(LX[0] + NW, mid[0]), (AX[0], mid[0])], "submit", LX[0] + NW + 10, mid[0] - 6),
@@ -284,6 +334,8 @@ s += [
         [(LX[0] + NW / 2, R[1]), (LX[0] + NW / 2, R[0] + NH)], "read", LX[0] + NW / 2 + 6, R[1] - 16
     ),
     arrow([(LX[0] + NW, mid[2]), (AX[0], mid[2])], "deploy", LX[0] + NW + 10, mid[2] - 6),
+    arrow([(LX[0] + NW, mid[3]), (AX[0], mid[3])], "apply", LX[0] + NW + 10, mid[3] - 6),
+    arrow([(AX[2], mid[3]), (AX[1] + NW, mid[3])], "reads", AX[1] + NW + 8, mid[3] - 6),
     arrow([(AX[0] + NW, mid[0]), (AX[1], mid[0])], "per task", AX[0] + NW + 8, mid[0] - 6),
     arrow(
         [(AX[1] + NW / 2 + 30, R[0] + NH), (AX[1] + NW / 2 + 30, R[1])],
@@ -313,12 +365,12 @@ s += [
 # Data flow.
 C = [60, 290, 520, 750, 980]
 DW = 170
-RA, RB, RC = 420, 510, 600
+RA, RB, RC = 520, 610, 700
 ma, mb, mc = RA + NH // 2, RB + NH // 2, RC + NH // 2
 s.append(
     panel(
         40,
-        380,
+        480,
         1160,
         300,
         "Data flow, one scripts/run.sh call per step",
@@ -491,8 +543,8 @@ s += [
 ]
 
 # Quality checks.
-s.append(panel(40, 700, 1160, 110, "Quality checks", "What runs before code reaches main."))
-RQ = 735
+s.append(panel(40, 800, 1160, 110, "Quality checks", "What runs before code reaches main."))
+RQ = 835
 mq = RQ + NH // 2
 s += [
     node(
@@ -515,7 +567,7 @@ s += [
         "GitHub",
         "pull request to main",
         "main is protected: every change arrives as a pull request with passing CI "
-        "(continuous integration) and is squash-merged.",
+        "(continuous integration) before it is merged.",
         "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-"
         "repository/managing-protected-branches/about-protected-branches",
     ),
@@ -526,9 +578,10 @@ s += [
         NH,
         "ops",
         "GitHub Actions",
-        "uv sync --locked, ruff, pytest",
-        "CI (continuous integration) on every pull request. --locked fails if pyproject.toml "
-        "and uv.lock disagree.",
+        "ruff, pytest, terraform test",
+        "CI (continuous integration) on every pull request. uv sync --locked fails if "
+        "pyproject.toml and uv.lock disagree. terraform test checks the site config against a "
+        "mocked AWS provider, with no credentials.",
         REPO + ".github/workflows/ci.yml",
     ),
     node(
@@ -547,11 +600,32 @@ s += [
     ),
     arrow([(C[0] + DW, mq), (C[1], mq)]),
     arrow([(C[1] + DW, mq), (C[2], mq)]),
+    node(
+        C[4],
+        RQ,
+        DW,
+        NH,
+        "ops",
+        "terraform plan",
+        "OIDC role, drift check",
+        "GitHub Actions assumes a read-only AWS role through OIDC (OpenID Connect), with no "
+        "stored keys, and plans the site against live state. On main, any difference fails the "
+        "job: someone changed the site outside Terraform, or a merge was never applied.",
+        REPO + "infra/terraform/site/README.md#ci-continuous-integration",
+    ),
     arrow([(C[2] + DW, mq), (C[3], mq)]),
+    arrow(
+        [
+            (C[2] + DW / 2, RQ + NH),
+            (C[2] + DW / 2, RQ + NH + 12),
+            (C[4] + DW / 2, RQ + NH + 12),
+            (C[4] + DW / 2, RQ + NH),
+        ]
+    ),
 ]
 
 # Legend.
-LY = 840
+LY = 940
 s.append(panel(40, LY, 1160, 140, "Key", "Box colors."))
 for i, (kind, name, sub) in enumerate(
     [
