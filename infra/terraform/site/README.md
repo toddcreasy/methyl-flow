@@ -49,7 +49,9 @@ Applies run from a laptop. CI (continuous integration) only plans.
   merge nobody applied.
 
 GitHub mints a short-lived token per job; the role's trust policy accepts it only for
-`repo:toddcreasy/methyl-flow:pull_request` and `repo:toddcreasy/methyl-flow:ref:refs/heads/main`.
+`repo:toddcreasy@5910177/methyl-flow@1419372528:pull_request` and `...:ref:refs/heads/main`. This
+repo uses GitHub's immutable subject format, which carries the owner and repo IDs, so a recreated
+repo with the same name gets no access.
 Fork pull requests get no token, so they skip the plan. The role can read the site bucket's
 configuration (not its objects), CloudFront, and its own IAM (Identity and Access Management)
 definition, read the state file, and write only the lock file.
