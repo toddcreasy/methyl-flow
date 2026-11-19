@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the public results site and publish it to the MethylFlowSiteStack bucket behind CloudFront.
+# Build the public results site and publish it to the site bucket behind CloudFront.
 #
 #   scripts/publish_site.sh [--dry-run]
 #
@@ -10,8 +10,8 @@
 # Source links (GitHub, walkthrough, software list) are added only while the repo is public, so a
 # site published from a private repo has no dead links.
 #
-# Needs AWS credentials, the MethylFlowSiteStack deployed (infra/aws), the GitHub CLI, and Google
-# Chrome for the thumbnail (CHROME overrides the macOS path).
+# Needs AWS credentials, infra/terraform/site applied and initialized (terraform init), the GitHub
+# CLI, and Google Chrome for the thumbnail (CHROME overrides the macOS path).
 
 set -euo pipefail
 
@@ -23,13 +23,10 @@ DRY_RUN=false
 CHROME="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
 [[ -x "$CHROME" ]] || { echo "Chrome not found at $CHROME (set CHROME)" >&2; exit 1; }
 
-output() {
-    aws cloudformation describe-stacks --stack-name MethylFlowSiteStack \
-        --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text
-}
-BUCKET="$(output SiteBucketName)"
-DISTRIBUTION="$(output DistributionId)"
-URL="$(output SiteUrl)"
+output() { terraform -chdir=infra/terraform/site output -raw "$1"; }
+BUCKET="$(output site_bucket_name)"
+DISTRIBUTION="$(output distribution_id)"
+URL="$(output site_url)"
 
 SITE="$(mktemp -d)"
 trap 'rm -r "$SITE"' EXIT

@@ -40,3 +40,7 @@ infra/aws/cdk-outputs.json
 
 # Personal notes
 TODO.md
+
+# Terraform
+infra/terraform/**/.terraform/
+*.tfplan

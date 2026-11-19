@@ -51,7 +51,7 @@ The laptop only submits. `scripts/run.sh` uploads `config/`, `pipelines/`, `src/
 
 ### AWS (Amazon Web Services) services
 
-All defined in one CDK (Cloud Development Kit) app, `infra/aws/` ([its README](infra/aws/README.md)).
+The pipeline side is one CDK (Cloud Development Kit) app, `infra/aws/` ([its README](infra/aws/README.md)). The results site is Terraform, `infra/terraform/site/` ([its README](infra/terraform/site/README.md)), moved off CDK (Cloud Development Kit) by import without changing its address.
 
 | Service | Job here | Why this one |
 |---|---|---|
@@ -61,8 +61,9 @@ All defined in one CDK (Cloud Development Kit) app, `infra/aws/` ([its README](i
 | **CloudWatch Logs** | Console output of every job | For failures that happen before Nextflow writes its own log. |
 | **AWS Budgets** | $50 a month, filtered to the `project=methyl-flow` tag | Email at 80% and 100% of spend. |
 | **Lambda + EventBridge Scheduler** | Daily snapshot of this repo's GitHub traffic to S3, with an email summary (`MethylFlowTrafficStack`) | GitHub keeps traffic for only 14 days; a scheduled function costs nothing between runs. |
-| **CloudFront** | Serves the results site from a private bucket (`MethylFlowSiteStack`) | HTTPS (secure HTTP), cached at the edge, and the bucket itself never accepts public requests. |
-| **CloudFormation / CDK (Cloud Development Kit)** | Every resource above | One Python app with tests, deployed with one command. |
+| **CloudFront** | Serves the results site from a private bucket (Terraform, `infra/terraform/site/`) | HTTPS (secure HTTP), cached at the edge, and the bucket itself never accepts public requests. |
+| **CloudFormation / CDK (Cloud Development Kit)** | Every resource above except the results site | One Python app with tests, deployed with one command. |
+| **Terraform** | The results site: bucket, CloudFront distribution, and the read-only role GitHub Actions uses to run `terraform plan` | State in S3 (Amazon Simple Storage Service) with lockfile locking; `terraform test` runs in CI (continuous integration) against a mocked provider, and every pull request gets a plan through OIDC (OpenID Connect) with no stored keys. |
 
 Not AWS (Amazon Web Services): Nextflow and nf-core/methylseq (the pipeline), Seqera Platform (live run monitoring), Seqera Containers (pinned images for this repo's pipelines), and GitHub Actions.
 
@@ -192,7 +193,7 @@ The `convert`, `qc`, and `dss` params files name the exact upstream run they rea
 
 ### Results site
 
-`scripts/publish_site.sh` builds a public results hub and uploads it to `MethylFlowSiteStack` (`infra/aws/`): a private S3 (Amazon Simple Storage Service) bucket that only CloudFront (Amazon's content delivery network) can read, served over HTTPS (secure HTTP). The hub (`scripts/make_hub.py`) explains each step with its figures and links to every report; its numbers are read from the run tables in `docs/reports/gse95654_20m/tables/`. The script also makes `thumbnail.png`, a 1200 by 630 pixel screenshot of the hub's top for link previews. Links into this repo appear only while the repo is public.
+`scripts/publish_site.sh` builds a public results hub and uploads it to the site bucket (`infra/terraform/site/`): a private S3 (Amazon Simple Storage Service) bucket that only CloudFront (Amazon's content delivery network) can read, served over HTTPS (secure HTTP). The hub (`scripts/make_hub.py`) explains each step with its figures and links to every report; its numbers are read from the run tables in `docs/reports/gse95654_20m/tables/`. The script also makes `thumbnail.png`, a 1200 by 630 pixel screenshot of the hub's top for link previews. Links into this repo appear only while the repo is public.
 
 ```bash
 scripts/publish_site.sh --dry-run   # build and list every file, upload nothing
@@ -219,7 +220,8 @@ pipelines/            this repo's Nextflow pipelines: fetch_sra, convert, qc, ds
 src/methyl_flow/      conversion, QC table, plots, and the interactive reports
 r/                    DSS differential methylation (R, its own renv project) and its tests
 tests/                pytest tests on small fixture files, no network by default
-infra/aws/            CDK stacks: AWS Batch, S3, and the Nextflow head job; the public results site
+infra/aws/            CDK stacks: AWS Batch, S3, the Nextflow head job, and the traffic snapshot
+infra/terraform/site/ Terraform: the public results site and the CI plan role
 docs/                 walkthrough, software list, architecture diagram, images, reports
 ```
 
