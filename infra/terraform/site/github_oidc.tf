@@ -16,9 +16,10 @@ variable "state_bucket" {
 
 data "aws_caller_identity" "current" {}
 
-# Created once per account; another project already owns it
+# Created once per account; another project already owns it. Looked up by ARN, not URL: a URL
+# lookup lists every provider, and IAM can grant that list call only on all resources.
 data "aws_iam_openid_connect_provider" "github" {
-  url = "https://token.actions.githubusercontent.com"
+  arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 
 resource "aws_iam_role" "github_plan" {
