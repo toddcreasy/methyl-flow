@@ -3,8 +3,10 @@
 # pull requests and main branch. Applies still run from a laptop.
 
 locals {
-  github_repo = "toddcreasy/methyl-flow"
-  state_key   = "site/terraform.tfstate"
+  # This repo issues GitHub's immutable subject format: owner and repo IDs next to the names, so a
+  # deleted and recreated repo with the same name cannot assume the role
+  github_subject = "repo:toddcreasy@5910177/methyl-flow@1419372528"
+  state_key      = "site/terraform.tfstate"
 }
 
 variable "state_bucket" {
@@ -32,8 +34,8 @@ resource "aws_iam_role" "github_plan" {
         StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
         StringLike = {
           "token.actions.githubusercontent.com:sub" = [
-            "repo:${local.github_repo}:pull_request",
-            "repo:${local.github_repo}:ref:refs/heads/main",
+            "${local.github_subject}:pull_request",
+            "${local.github_subject}:ref:refs/heads/main",
           ]
         }
       }

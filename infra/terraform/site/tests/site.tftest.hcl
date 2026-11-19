@@ -85,8 +85,8 @@ run "distribution_is_https_only_with_index" {
 run "plan_role_trusts_only_this_repo" {
   assert {
     condition = toset(jsondecode(aws_iam_role.github_plan.assume_role_policy).Statement[0].Condition.StringLike["token.actions.githubusercontent.com:sub"]) == toset([
-      "repo:toddcreasy/methyl-flow:pull_request",
-      "repo:toddcreasy/methyl-flow:ref:refs/heads/main",
+      "repo:toddcreasy@5910177/methyl-flow@1419372528:pull_request",
+      "repo:toddcreasy@5910177/methyl-flow@1419372528:ref:refs/heads/main",
     ])
     error_message = "Only this repo's pull requests and main branch may assume the plan role."
   }
