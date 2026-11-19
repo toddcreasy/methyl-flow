@@ -99,17 +99,8 @@ deleted. Tags let Cost Explorer show this stack's spend under `project=methyl-fl
 
 ## Results site
 
-`MethylFlowSiteStack` (`stacks/site_stack.py`) is separate from the Batch stack so the data bucket
-stays private. It has one bucket with all public access blocked, read only by CloudFront through
-Origin Access Control, HTTPS (secure HTTP) only, security headers, and the cheapest price class
-(North America and Europe edges). `scripts/publish_site.sh` fills it; the bucket is emptied and
-deleted with the stack, since its contents are rebuilt on every publish.
-
-```bash
-cdk deploy MethylFlowSiteStack
-```
-
-Outputs: `SiteUrl`, `SiteBucketName`, `DistributionId`. The publish script reads them itself.
+Moved to Terraform on 2026-11-19: `infra/terraform/site/` ([its README](../terraform/site/README.md)).
+The bucket and distribution were imported, not recreated, so the address did not change.
 
 ## Repo traffic
 

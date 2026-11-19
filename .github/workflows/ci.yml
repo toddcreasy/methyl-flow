@@ -35,3 +35,57 @@ jobs:
           docker run --rm -v "$PWD/r:/r:ro" -w /r
           quay.io/biocontainers/bioconductor-dss:2.58.0--r45h01b2380_0
           Rscript --no-init-file tests/test_dss.R
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform/site
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+      - run: terraform test
+
+  # Plans against the live state through OIDC: no stored AWS keys. Fork pull requests get no OIDC
+  # token, so they skip this job.
+  terraform-plan:
+    needs: terraform
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: infra/terraform/site
+    env:
+      TF_VAR_state_bucket: ${{ secrets.TF_STATE_BUCKET }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ secrets.TF_PLAN_ROLE_ARN }}
+          aws-region: us-east-1
+          mask-aws-account-id: true
+      - run: terraform init -input=false -backend-config="bucket=$TF_VAR_state_bucket"
+      # Exit code 2 means the plan has changes: expected on a pull request, drift on main
+      - run: |
+          set +e
+          terraform plan -input=false -no-color -detailed-exitcode | tee plan.txt
+          code=${PIPESTATUS[0]}
+          { echo '```'; tail -n 60 plan.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [[ $code == 1 ]]; then exit 1; fi
+          if [[ $code == 2 && "$GITHUB_EVENT_NAME" == push ]]; then
+            echo "::error::main differs from the live site infrastructure; apply it or find the drift"
+            exit 1
+          fi
