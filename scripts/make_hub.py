@@ -85,6 +85,11 @@ def section(anchor, heading, body, figure=None, alt="", links=()):
         if figure
         else ""
     )
+    # An SVG inside <img> loses its links and hover notes; opened directly it keeps them
+    if figure and figure.endswith(".svg"):
+        fig = fig.replace("<figure><img", f'<figure><a href="{figure}"><img').replace(
+            "</figure>", "</a><figcaption>Click for the interactive version.</figcaption></figure>"
+        )
     link_html = "".join(
         f'<a class="button" href="{href}">{html.escape(label)}</a>' for label, href in links
     )
@@ -120,10 +125,12 @@ sections = [
         "reproduces from its params file. The steps: fetch reads from the SRA (Sequence Read "
         "Archive), process them with nf-core/methylseq, convert the methylation calls into a "
         "beta table, check quality, test tumor against normal with DSS (Dispersion Shrinkage "
-        "for Sequencing data), and annotate the results.</p>",
+        "for Sequencing data), and annotate the results. The infrastructure is code: the CDK "
+        "(Cloud Development Kit) builds the Batch side, and Terraform builds this site.</p>",
         "architecture.svg",
         "Architecture: a laptop submits runs to AWS Batch; pipelines fetch reads, run "
-        "nf-core/methylseq, convert, run QC, and test with DSS; reports land in S3.",
+        "nf-core/methylseq, convert, run QC, and test with DSS; reports land in S3. "
+        "Terraform builds the results site on S3 and CloudFront.",
     ),
     section(
         "data",
