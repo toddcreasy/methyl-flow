@@ -60,7 +60,6 @@ The pipeline side is one CDK (Cloud Development Kit) app, `infra/aws/` ([its REA
 | **Secrets Manager** | The Seqera Platform token | Only the head job's role can read it; it never sits in a file. |
 | **CloudWatch Logs** | Console output of every job | For failures that happen before Nextflow writes its own log. |
 | **AWS Budgets** | $50 a month, filtered to the `project=methyl-flow` tag | Email at 80% and 100% of spend. |
-| **Lambda + EventBridge Scheduler** | Daily snapshot of this repo's GitHub traffic to S3, with an email summary (`MethylFlowTrafficStack`) | GitHub keeps traffic for only 14 days; a scheduled function costs nothing between runs. |
 | **CloudFront** | Serves the results site from a private bucket (Terraform, `infra/terraform/site/`) | HTTPS (secure HTTP), cached at the edge, and the bucket itself never accepts public requests. |
 | **CloudFormation / CDK (Cloud Development Kit)** | Every resource above except the results site | One Python app with tests, deployed with one command. |
 | **Terraform** | The results site: bucket, CloudFront distribution, and the read-only role GitHub Actions uses to run `terraform plan` | State in S3 (Amazon Simple Storage Service) with lockfile locking; `terraform test` runs in CI (continuous integration) against a mocked provider, and every pull request gets a plan through OIDC (OpenID Connect) with no stored keys. |
@@ -220,7 +219,7 @@ pipelines/            this repo's Nextflow pipelines: fetch_sra, convert, qc, ds
 src/methyl_flow/      conversion, QC table, plots, and the interactive reports
 r/                    DSS differential methylation (R, its own renv project) and its tests
 tests/                pytest tests on small fixture files, no network by default
-infra/aws/            CDK stacks: AWS Batch, S3, the Nextflow head job, and the traffic snapshot
+infra/aws/            CDK stacks: AWS Batch, S3, and the Nextflow head job
 infra/terraform/site/ Terraform: the public results site and the CI plan role
 docs/                 walkthrough, software list, architecture diagram, images, reports
 ```

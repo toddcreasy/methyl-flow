@@ -104,25 +104,7 @@ The bucket and distribution were imported, not recreated, so the address did not
 
 ## Repo traffic
 
-GitHub keeps repo views and clones for 14 days. `MethylFlowTrafficStack` (`stacks/traffic_stack.py`,
-ported from glia-nav) runs the `methyl-flow-github-traffic` Lambda at 7:00 a.m. America/New_York,
-which follows daylight saving time. It writes the raw API response to `snapshots/<date>.json` in the
-`TrafficBucketName` bucket, merges the daily counts into `history.json` there, and emails a summary
-through the `methyl-flow-traffic` SNS (Simple Notification Service) topic to `traffic_email`. A
-failed run alarms through the same topic (`methyl-flow-github-traffic-errors`).
-
-The traffic API needs a fine-grained PAT (personal access token) with Administration read on this
-repo, stored in the `methyl-flow/github-traffic-token` secret. glia-nav's PAT covers both repos, so
-the value is copied from `glia-nav/github-traffic-token`; when it expires, renew it once and copy it
-to both secrets.
-
-```bash
-cdk deploy MethylFlowTrafficStack -c traffic_email=<you@example.com>
-```
-
-Keep `"traffic_email"` in `cdk.context.json` (gitignored): the app builds every stack on each
-`cdk` command, so deploys of the other stacks need it too. Clone counts include every CI
-(continuous integration) checkout and the bots that clone new public repos; read views, not clones.
+Moved on 2026-11-20 to project-template's `ops/traffic/`: one daily email for every repo, as an HTML table. `MethylFlowTrafficStack` was destroyed; its bucket was retained, and its history copied to the new one.
 
 ## Teardown
 
