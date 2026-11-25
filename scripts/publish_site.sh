@@ -10,6 +10,11 @@
 # Source links (GitHub, walkthrough, software list) are added only while the repo is public, so a
 # site published from a private repo has no dead links.
 #
+# The pages this repo generates (the hub and the QC (quality control) and DMR (differentially
+# methylated region) reports) get a release footer: license, source, the version in
+# pyproject.toml, and this run's date (src/methyl_flow/site_footer.py). The Nextflow, MultiQC, and
+# IGV (Integrative Genomics Viewer) reports are third-party HTML and are copied as they are.
+#
 # Needs AWS credentials, infra/terraform/site applied and initialized (terraform init), the GitHub
 # CLI, and Google Chrome for the thumbnail (CHROME overrides the macOS path).
 
@@ -39,6 +44,9 @@ uv run python scripts/make_hub.py --base-url "$URL" ${REPO_ARGS[@]+"${REPO_ARGS[
 cp docs/images/*.png "$SITE/images/"
 cp docs/reports/gse95654_20m/*.html "$SITE/reports/"
 cp docs/architecture.svg "$SITE/"
+RELEASED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+uv run python -m methyl_flow.site_footer --released-at "$RELEASED_AT" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} \
+    "$SITE/index.html" "$SITE/reports/qc_report.html" "$SITE/reports/dmr_report.html"
 "$CHROME" --headless=new --disable-gpu --hide-scrollbars --window-size=1200,630 \
     --screenshot="$SITE/thumbnail.png" "file://$SITE/index.html" 2>/dev/null
 
