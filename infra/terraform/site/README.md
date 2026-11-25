@@ -6,10 +6,11 @@ pipeline infrastructure stays in the CDK (Cloud Development Kit) app in `infra/a
 | File | What it holds |
 |---|---|
 | `main.tf` | S3 (Amazon Simple Storage Service) bucket with all public access blocked, its policy (HTTPS (secure HTTP) only, read only by this distribution), Origin Access Control, security headers policy, CloudFront distribution |
+| `domain.tf` | `methyl-flow.pilotbio.io`: an ACM (AWS Certificate Manager) certificate validated through DNS (Domain Name System), and A and AAAA (IPv4 and IPv6 address) alias records pointing at the distribution. The Route 53 zone is delegated from the parent domain and managed in project-template's `ops/dns`, so this config only looks it up |
 | `github_oidc.tf` | `methyl-flow-github-terraform-plan`, an IAM (Identity and Access Management) role GitHub Actions assumes through OIDC (OpenID Connect) to run `terraform plan` |
 | `outputs.tf` | `site_bucket_name`, `distribution_id`, `site_url`; `scripts/publish_site.sh` reads them |
 | `versions.tf` | Terraform and AWS (Amazon Web Services) provider pins, S3 (Amazon Simple Storage Service) backend, default tags (`managed-by=terraform`) |
-| `tests/site.tftest.hcl` | `terraform test` against a mocked provider: public access blocked, only CloudFront reads the bucket, HTTPS (secure HTTP) only with `index.html`, plan role trusts only this repo |
+| `tests/site.tftest.hcl` | `terraform test` against a mocked provider: public access blocked, only CloudFront reads the bucket, HTTPS (secure HTTP) only with `index.html`, plan role trusts only this repo, the site answers on its own name with a TLS (Transport Layer Security) 1.2 or newer certificate |
 
 ## State
 
@@ -53,8 +54,10 @@ GitHub mints a short-lived token per job; the role's trust policy accepts it onl
 repo uses GitHub's immutable subject format, which carries the owner and repo IDs, so a recreated
 repo with the same name gets no access.
 Fork pull requests get no token, so they skip the plan. The role can read the site bucket's
-configuration (not its objects), CloudFront, and its own IAM (Identity and Access Management)
-definition, read the state file, and write only the lock file.
+configuration (not its objects), CloudFront, the site's certificate and Route 53 zone, and its own
+IAM (Identity and Access Management) definition, read the state file, and write only the lock
+file. Finding the zone by name lists every zone in the account, which IAM grants only on all
+resources; that list holds names, not records.
 
 Repository secrets (secrets, not variables, so GitHub masks the account ID in public logs):
 

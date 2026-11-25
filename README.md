@@ -10,7 +10,7 @@ Turn raw bisulfite sequencing reads into a methylation beta table, a QC (quality
 scripts/run.sh methylseq config/methylseq/gse95654_20m.yaml
 ```
 
-**[Live results](https://d1m4tbm3vqx6m6.cloudfront.net)**: one page that walks through each step, with figures and links to every interactive report.
+**[Live results](https://methyl-flow.pilotbio.io)**: one page that walks through each step, with figures and links to every interactive report.
 
 [docs/walkthrough.md](docs/walkthrough.md) goes stage by stage: what each step does, the numbers it produced, and what went wrong. [docs/software.md](docs/software.md) lists every tool, what it does, and why it was picked over the alternatives.
 
@@ -45,9 +45,9 @@ No reads are stored in git or on the laptop. `fetch_sra` writes them straight to
 
 ## How it fits together
 
-<a href="https://d1m4tbm3vqx6m6.cloudfront.net/architecture.svg"><img src="docs/architecture.svg" alt="methyl-flow architecture. Top: a laptop runs scripts/run.sh, which uploads a run bundle to S3 and submits a Nextflow head job to AWS Batch; the head job starts one Spot task job per pipeline task, reads and writes S3, gets the Seqera token from Secrets Manager, and streams progress to Seqera Platform. cdk deploy creates the Batch stack through CloudFormation, and terraform apply creates the results site: a private S3 bucket read only by CloudFront, with Terraform state in its own versioned bucket. Middle: SRA and GENCODE feed fetch_sra, then nf-core/methylseq, which produces the MultiQC report and coverage files; convert turns those into the beta table methyl-floor reads; qc writes the QC report; dss reads the coverage counts and writes the DMR report. Bottom: pre-commit, pull requests, GitHub Actions running pytest, the R tests, and terraform test, and a terraform plan through OIDC that checks for drift." width="100%"></a>
+<a href="https://methyl-flow.pilotbio.io/architecture.svg"><img src="docs/architecture.svg" alt="methyl-flow architecture. Top: a laptop runs scripts/run.sh, which uploads a run bundle to S3 and submits a Nextflow head job to AWS Batch; the head job starts one Spot task job per pipeline task, reads and writes S3, gets the Seqera token from Secrets Manager, and streams progress to Seqera Platform. cdk deploy creates the Batch stack through CloudFormation, and terraform apply creates the results site: a private S3 bucket read only by CloudFront, with Terraform state in its own versioned bucket. Middle: SRA and GENCODE feed fetch_sra, then nf-core/methylseq, which produces the MultiQC report and coverage files; convert turns those into the beta table methyl-floor reads; qc writes the QC report; dss reads the coverage counts and writes the DMR report. Bottom: pre-commit, pull requests, GitHub Actions running pytest, the R tests, and terraform test, and a terraform plan through OIDC that checks for drift." width="100%"></a>
 
-The laptop only submits. `scripts/run.sh` uploads `config/`, `pipelines/`, `src/`, and `r/` to S3 (Amazon Simple Storage Service), then starts Nextflow itself as an AWS (Amazon Web Services) Batch job on an on-demand queue, so the laptop can close and a Spot reclaim can't kill the whole run. Nextflow sends every task to a Spot queue that scales from zero to 256 vCPUs (virtual CPUs) and back. Click the diagram for [the interactive version](https://d1m4tbm3vqx6m6.cloudfront.net/architecture.svg): hover a box for what it does and why, and click it for its source or docs. GitHub shows the copy in the repo as a plain image.
+The laptop only submits. `scripts/run.sh` uploads `config/`, `pipelines/`, `src/`, and `r/` to S3 (Amazon Simple Storage Service), then starts Nextflow itself as an AWS (Amazon Web Services) Batch job on an on-demand queue, so the laptop can close and a Spot reclaim can't kill the whole run. Nextflow sends every task to a Spot queue that scales from zero to 256 vCPUs (virtual CPUs) and back. Click the diagram for [the interactive version](https://methyl-flow.pilotbio.io/architecture.svg): hover a box for what it does and why, and click it for its source or docs. GitHub shows the copy in the repo as a plain image.
 
 ### AWS (Amazon Web Services) services
 
@@ -153,7 +153,7 @@ Each DMR (differentially methylated region) was placed against GENCODE release 5
 
 ### Interactive reports
 
-All of these are on the [results site](https://d1m4tbm3vqx6m6.cloudfront.net); the links below are the copies in this repo, which GitHub shows as source, so open those after downloading. The QC (quality control), DMR (differentially methylated region), and IGV (Integrative Genomics Viewer) reports load their libraries, and the IGV report its genome sequence, over the network; the others are self-contained.
+All of these are on the [results site](https://methyl-flow.pilotbio.io); the links below are the copies in this repo, which GitHub shows as source, so open those after downloading. The QC (quality control), DMR (differentially methylated region), and IGV (Integrative Genomics Viewer) reports load their libraries, and the IGV report its genome sequence, over the network; the others are self-contained.
 
 | Report | What it shows |
 |---|---|

@@ -63,6 +63,25 @@ resource "aws_iam_role_policy" "github_plan" {
         Resource = "*"
       },
       {
+        Sid      = "ReadCertificate"
+        Effect   = "Allow"
+        Action   = ["acm:DescribeCertificate", "acm:ListTagsForCertificate"]
+        Resource = aws_acm_certificate.site.arn
+      },
+      {
+        Sid      = "ReadSiteZone"
+        Effect   = "Allow"
+        Action   = ["route53:GetHostedZone", "route53:ListResourceRecordSets", "route53:ListTagsForResource"]
+        Resource = data.aws_route53_zone.site.arn
+      },
+      {
+        # The zone lookup by name lists zones, which IAM grants only on all resources
+        Sid      = "FindSiteZone"
+        Effect   = "Allow"
+        Action   = ["route53:ListHostedZones", "route53:ListHostedZonesByName"]
+        Resource = "*"
+      },
+      {
         Sid    = "ReadOwnIamConfig"
         Effect = "Allow"
         Action = ["iam:GetRole", "iam:GetRolePolicy", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies", "iam:GetOpenIDConnectProvider"]
