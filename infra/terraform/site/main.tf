@@ -100,6 +100,7 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   comment             = "methyl-flow results"
+  aliases             = [var.domain_name]
   default_root_object = "index.html"
   is_ipv6_enabled     = true
   http_version        = "http2"
@@ -129,6 +130,8 @@ resource "aws_cloudfront_distribution" "site" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn      = aws_acm_certificate_validation.site.certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
   }
 }

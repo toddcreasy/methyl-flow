@@ -22,6 +22,28 @@ mock_provider "aws" {
       arn = "arn:aws:cloudfront::123456789012:distribution/EXAMPLE"
     }
   }
+  mock_data "aws_route53_zone" {
+    defaults = {
+      zone_id = "Z0EXAMPLE"
+      arn     = "arn:aws:route53:::hostedzone/Z0EXAMPLE"
+    }
+  }
+  mock_resource "aws_acm_certificate" {
+    defaults = {
+      arn = "arn:aws:acm:us-east-1:123456789012:certificate/example"
+      domain_validation_options = [{
+        domain_name           = "methyl-flow.pilotbio.io"
+        resource_record_name  = "_example.methyl-flow.pilotbio.io."
+        resource_record_type  = "CNAME"
+        resource_record_value = "_example.acm-validations.aws."
+      }]
+    }
+  }
+  mock_resource "aws_acm_certificate_validation" {
+    defaults = {
+      certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/example"
+    }
+  }
   mock_resource "aws_iam_role" {
     defaults = {
       arn = "arn:aws:iam::123456789012:role/methyl-flow-github-terraform-plan"
@@ -94,5 +116,36 @@ run "plan_role_trusts_only_this_repo" {
       "repo:toddcreasy@5910177/methyl-flow@1419372528:ref:refs/heads/main",
     ])
     error_message = "Only this repo's pull requests and main branch may assume the plan role."
+  }
+}
+
+run "site_answers_on_its_own_name" {
+  assert {
+    condition     = toset(aws_cloudfront_distribution.site.aliases) == toset(["methyl-flow.pilotbio.io"])
+    error_message = "The distribution must answer on the site's name."
+  }
+
+  assert {
+    condition     = aws_acm_certificate.site.domain_name == "methyl-flow.pilotbio.io" && aws_acm_certificate.site.validation_method == "DNS"
+    error_message = "The certificate must cover the site's name and validate through DNS."
+  }
+
+  assert {
+    condition = (
+      aws_cloudfront_distribution.site.viewer_certificate[0].acm_certificate_arn == aws_acm_certificate_validation.site.certificate_arn
+      && aws_cloudfront_distribution.site.viewer_certificate[0].ssl_support_method == "sni-only"
+      && aws_cloudfront_distribution.site.viewer_certificate[0].minimum_protocol_version == "TLSv1.2_2021"
+    )
+    error_message = "Viewers must get the validated certificate over SNI, TLS 1.2 or newer."
+  }
+
+  assert {
+    condition = alltrue([
+      for t in ["A", "AAAA"] :
+      aws_route53_record.site[t].name == "methyl-flow.pilotbio.io"
+      && aws_route53_record.site[t].alias[0].name == aws_cloudfront_distribution.site.domain_name
+      && aws_route53_record.site[t].alias[0].zone_id == aws_cloudfront_distribution.site.hosted_zone_id
+    ])
+    error_message = "The A and AAAA records must alias the distribution."
   }
 }

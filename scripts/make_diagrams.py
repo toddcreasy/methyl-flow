@@ -313,7 +313,7 @@ s += [
         "results site, HTTPS only",
         "Serves the site over HTTPS (secure HTTP) with security headers, cached at North America "
         "and Europe edges. Reads the bucket through Origin Access Control.",
-        "https://d1m4tbm3vqx6m6.cloudfront.net",
+        "https://methyl-flow.pilotbio.io",
     ),
 ]
 s += [
