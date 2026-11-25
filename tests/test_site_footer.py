@@ -1,4 +1,6 @@
+import tomllib
 from datetime import UTC, datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -9,11 +11,9 @@ PAGE = "<html><body><main>results</main></body></html>"
 REPO = "https://github.com/owner/methyl-flow"
 
 
-def test_version_comes_from_pyproject(tmp_path):
-    pyproject = tmp_path / "pyproject.toml"
-    pyproject.write_text('[project]\nname = "x"\nversion = "1.2.3"\n')
-    assert site_footer.version(pyproject) == "1.2.3"
-    assert site_footer.version() == site_footer.version(site_footer.PYPROJECT)
+def test_version_is_the_one_in_pyproject():
+    pyproject = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
+    assert site_footer.version() == pyproject["project"]["version"]
 
 
 def test_footer_reads_license_source_release_date():
@@ -33,7 +33,8 @@ def test_footer_reads_license_source_release_date():
 
 
 def test_footer_date_is_utc_without_script():
-    # 7:42 PM in New York on November 25 is already November 26 in UTC.
+    # 7:42 in the evening in New York on November 25 is already November 26 in UTC (Coordinated
+    # Universal Time).
     eastern = WHEN.astimezone(timezone(timedelta(hours=-5)))
     block = site_footer.footer("0.1.0", eastern, REPO)
     assert ">November 26, 2026</time>" in block
@@ -54,6 +55,13 @@ def test_stamp_goes_before_body_and_replaces_an_earlier_footer():
     assert again.count(site_footer.START) == 1
     assert "Release Version 0.2.0" in again
     assert "0.1.0" not in again
+
+
+def test_stamp_keeps_the_body_tag_whole_after_a_dotted_capital_i():
+    # str.lower() turns U+0130 into two code points, which once shifted the offset into the tag.
+    page = "<html><body><p>İİİ Istanbul</p></BODY></html>"
+    out = site_footer.stamp(page, site_footer.footer("0.1.0", WHEN))
+    assert out.endswith("<!-- /release-footer -->\n</BODY></html>")
 
 
 def test_stamp_needs_a_body():

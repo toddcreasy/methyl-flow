@@ -13,7 +13,8 @@
 # The pages this repo generates (the hub and the QC (quality control) and DMR (differentially
 # methylated region) reports) get a release footer: license, source, the version in
 # pyproject.toml, and this run's date (src/methyl_flow/site_footer.py). The Nextflow, MultiQC, and
-# IGV (Integrative Genomics Viewer) reports are third-party HTML and are copied as they are.
+# IGV (Integrative Genomics Viewer) reports are third-party HTML (HyperText Markup Language) and
+# are copied as they are.
 #
 # Needs AWS credentials, infra/terraform/site applied and initialized (terraform init), the GitHub
 # CLI, and Google Chrome for the thumbnail (CHROME overrides the macOS path).
