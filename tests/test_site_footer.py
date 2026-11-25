@@ -29,6 +29,7 @@ def test_footer_reads_license_source_release_date():
     assert block.count("&middot;") == 3
     assert f'href="{REPO}/blob/main/LICENSE"' in block
     assert f'href="{REPO}"' in block
+    assert block.count('target="_blank" rel="noopener noreferrer"') == 2
     assert 'datetime="2026-11-26T00:42:00Z"' in block
 
 

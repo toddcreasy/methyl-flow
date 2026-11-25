@@ -35,7 +35,8 @@ STYLE = (
     "max-width:1000px;margin:0 auto;padding:8px 16px 40px;color:var(--muted,#52606d);"
     "font:14px/1.5 system-ui,-apple-system,sans-serif;display:flex;flex-wrap:wrap;gap:4px 12px"
 )
-LINK = 'style="color:inherit;text-underline-offset:3px"'
+# Both links leave the site, so they open in a new tab, as in the other projects' footers.
+LINK = 'target="_blank" rel="noopener noreferrer" style="color:inherit;text-underline-offset:3px"'
 DOT = '<span aria-hidden="true" style="font-weight:700;color:var(--text,#1f2933)">&middot;</span>'
 LOCAL_DATE = """<script>
 for (const t of document.querySelectorAll("time.released")) {
